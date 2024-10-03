@@ -1,0 +1,7 @@
+.aider*
+test.py
+output.json
+.env
+data/
+__pycache__/
+nohup.out
