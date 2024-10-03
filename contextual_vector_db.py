@@ -90,8 +90,8 @@ class ContextualVectorDB:
             contextualized_text, usage = self.situate_context(doc['content'], chunk['content'])
             with self.token_lock:
                 # Gemini doesn't provide usage details, so we can't track tokens
-            
-            return {
+                
+                return {
                 #append the context to the original text chunk
                 'text_to_embed': f"{chunk['content']}\n\n{contextualized_text}",
                 'metadata': {
