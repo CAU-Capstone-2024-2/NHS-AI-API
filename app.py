@@ -1,49 +1,68 @@
 import os
-import google.generativeai as genai
 from flask import Flask, request, jsonify
-from ContextualVectorDB import ContextualVectorDB
+import google.generativeai as genai
+from contextual_vector_db import ContextualVectorDB  # paste.txt에 정의된 클래스
+import pickle
 
-app = Flask(__name__)
+# 환경 변수에서 API 키 가져오기
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Load your ContextualVectorDB instance (replace with your actual loading logic)
-vector_db = ContextualVectorDB.load_db("./data/your_db_name/contextual_vector_db.pkl") 
+# Gemini 설정
+genai.configure(api_key=GEMINI_API_KEY)
 
-# Configure Gemini
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+# ContextualVectorDB 초기화
+db = ContextualVectorDB(name="your_db_name", voyage_api_key=VOYAGE_API_KEY, anthropic_api_key=ANTHROPIC_API_KEY)
+# 데이터 로드 (필요에 따라 load_data 메소드 사용)
+# 예: db.load_data(your_dataset, parallel_threads=4)
+
+# Gemini 모델 생성
 generation_config = {
-    "temperature": 0.7,  # Adjust as needed
+    "temperature": 0.7,
     "top_p": 0.95,
     "top_k": 40,
-    "max_output_tokens": 1024,  # Adjust as needed
+    "max_output_tokens": 512,
     "response_mime_type": "text/plain",
 }
+
 model = genai.GenerativeModel(
     model_name="gemini-1.5-pro-002",
     generation_config=generation_config,
+    # safety_settings 등 추가 설정 가능
 )
 
-@app.route('/query', methods=['POST'])
-def query():
+# Flask 애플리케이션 초기화
+app = Flask(__name__)
+
+@app.route('/ask', methods=['POST'])
+def ask_question():
     data = request.get_json()
-    question = data.get('question')
+    question = data.get('question', '')
 
     if not question:
-        return jsonify({'error': 'Missing question'}), 400
+        return jsonify({"error": "질문을 입력해주세요."}), 400
 
-    # Search for relevant documents
-    results = vector_db.search(question, k=5) 
+    try:
+        # 질문과 관련된 상위 5개 문서 검색
+        top_docs = db.search(query=question, k=5)
 
-    # Prepare context for Gemini
-    context = ""
-    for result in results:
-        context += f"## {result['metadata']['contextualized_content']}\n\n{result['metadata']['original_content']}\n\n"
+        # 관련 문서 내용 추출
+        context = "\n\n".join([doc['metadata']['contextualized_content'] for doc in top_docs])
 
-    # Generate answer using Gemini
-    chat_session = model.start_chat(history=[])
-    prompt = f"### Question:\n{question}\n\n### Context:\n{context}\n\n### Answer:"
-    response = chat_session.send_message(prompt)
+        # Gemini에 전송할 프롬프트 생성
+        prompt = f"다음 문서를 참고하여 질문에 답변해주세요:\n\n{context}\n\n질문: {question}\n답변:"
 
-    return jsonify({'answer': response.text})
+        # Gemini를 사용하여 답변 생성
+        response = model.start_chat(history=[])
+        response = response.send_message(prompt)
+        answer = response.text.strip()
+
+        return jsonify({"answer": answer})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # 서버 실행
+    app.run(host='0.0.0.0', port=5000)
