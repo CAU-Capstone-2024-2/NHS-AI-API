@@ -63,7 +63,7 @@ def main():
             output.append(processed)
     
     # 결과를 JSON 파일로 저장
-    with open('output.json', 'w', encoding='utf-8') as json_file:
+    with open('.data/doc.json', 'w', encoding='utf-8') as json_file:
         json.dump(output, json_file, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
