@@ -6,8 +6,6 @@ import pickle
 
 # 환경 변수에서 API 키 가져오기
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 # Gemini 설정
 genai.configure(api_key=GEMINI_API_KEY)
