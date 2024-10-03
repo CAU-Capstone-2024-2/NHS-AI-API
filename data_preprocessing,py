@@ -30,12 +30,13 @@ def process_document(file_path):
     chunks = []
     
     for idx, doc in enumerate(documents):
-        chunk = {
-            "chunk_id": f"{doc_id}_chunk_{idx}",
-            "original_index": idx,
-            "content": doc.page_content
-        }
-        chunks.append(chunk)
+        if doc.page_content:  # Check if content is not empty
+            chunk = {
+                "chunk_id": f"{doc_id}_chunk_{idx}",
+                "original_index": idx,
+                "content": doc.page_content
+            }
+            chunks.append(chunk)
     
     result = {
         "doc_id": doc_id,
