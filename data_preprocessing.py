@@ -62,8 +62,8 @@ def main():
 
     for filename in filenames:
         file_path = os.path.join(directory, filename)
-            processed = process_document(file_path)
-            output.append(processed)
+        processed = process_document(file_path)
+        output.append(processed)
     
     # 결과를 JSON 파일로 저장
     with open('data/doc.json', 'w', encoding='utf-8') as json_file:
