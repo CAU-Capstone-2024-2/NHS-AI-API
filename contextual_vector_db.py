@@ -5,7 +5,7 @@ import numpy as np
 import voyageai
 from typing import List, Dict, Any
 from tqdm import tqdm
-import anthropic
+import google.generativeai as genai
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,7 +18,28 @@ class ContextualVectorDB:
             anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
         
         self.voyage_client = voyageai.Client(api_key=voyage_api_key)
-        self.anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key)
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+        # Create the model
+        generation_config = {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 40,
+          "max_output_tokens": 8192,
+          "response_mime_type": "text/plain",
+        }
+
+        self.gemini_model = genai.GenerativeModel(
+          model_name="gemini-1.5-flash-002",
+          generation_config=generation_config,
+          # safety_settings = Adjust safety settings
+          # See https://ai.google.dev/gemini-api/docs/safety-settings
+        )
+
+        self.chat_session = self.gemini_model.start_chat(
+          history=[
+          ]
+        )
         self.name = name
         self.embeddings = []
         self.metadata = []
@@ -34,45 +55,22 @@ class ContextualVectorDB:
         self.token_lock = threading.Lock()
 
     def situate_context(self, doc: str, chunk: str) -> tuple[str, Any]:
-        DOCUMENT_CONTEXT_PROMPT = """
+        prompt = f"""
         <document>
-        {doc_content}
+        {doc}
         </document>
-        """
 
-        CHUNK_CONTEXT_PROMPT = """
         Here is the chunk we want to situate within the whole document
         <chunk>
-        {chunk_content}
+        {chunk}
         </chunk>
 
         Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
         Answer only with the succinct context and nothing else.
         """
 
-        response = self.anthropic_client.beta.prompt_caching.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=1000,
-            temperature=0.0,
-            messages=[
-                {
-                    "role": "user", 
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": DOCUMENT_CONTEXT_PROMPT.format(doc_content=doc),
-                            "cache_control": {"type": "ephemeral"} #we will make use of prompt caching for the full documents
-                        },
-                        {
-                            "type": "text",
-                            "text": CHUNK_CONTEXT_PROMPT.format(chunk_content=chunk),
-                        },
-                    ]
-                },
-            ],
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-        )
-        return response.content[0].text, response.usage
+        response = self.chat_session.send_message(prompt)
+        return response.text, None  # Gemini doesn't provide usage details like Anthropic
 
     def load_data(self, dataset: List[Dict[str, Any]], parallel_threads: int = 1):
         if self.embeddings and self.metadata:
@@ -91,10 +89,7 @@ class ContextualVectorDB:
             #for each chunk, produce the context
             contextualized_text, usage = self.situate_context(doc['content'], chunk['content'])
             with self.token_lock:
-                self.token_counts['input'] += usage.input_tokens
-                self.token_counts['output'] += usage.output_tokens
-                self.token_counts['cache_read'] += usage.cache_read_input_tokens
-                self.token_counts['cache_creation'] += usage.cache_creation_input_tokens
+                # Gemini doesn't provide usage details, so we can't track tokens
             
             return {
                 #append the context to the original text chunk
@@ -126,15 +121,7 @@ class ContextualVectorDB:
 
         #logging token usage
         print(f"Contextual Vector database loaded and saved. Total chunks processed: {len(texts_to_embed)}")
-        print(f"Total input tokens without caching: {self.token_counts['input']}")
-        print(f"Total output tokens: {self.token_counts['output']}")
-        print(f"Total input tokens written to cache: {self.token_counts['cache_creation']}")
-        print(f"Total input tokens read from cache: {self.token_counts['cache_read']}")
-        
-        total_tokens = self.token_counts['input'] + self.token_counts['cache_read'] + self.token_counts['cache_creation']
-        savings_percentage = (self.token_counts['cache_read'] / total_tokens) * 100 if total_tokens > 0 else 0
-        print(f"Total input token savings from prompt caching: {savings_percentage:.2f}% of all input tokens used were read from cache.")
-        print("Tokens read from cache come at a 90 percent discount!")
+        # We can't log token usage with Gemini
 
     #we use voyage AI here for embeddings. Read more here: https://docs.voyageai.com/docs/embeddings
     def _embed_and_store(self, texts: List[str], data: List[Dict[str, Any]]):
