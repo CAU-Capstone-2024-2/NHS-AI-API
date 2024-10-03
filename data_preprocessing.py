@@ -57,9 +57,11 @@ def main():
     directory = './data/documents'
     output = []
     
-    for filename in os.listdir(directory):
-        if filename.startswith('doc_') and filename.endswith('.txt'):
-            file_path = os.path.join(directory, filename)
+    filenames = [f for f in os.listdir(directory) if f.startswith('doc_') and f.endswith('.txt')]
+    filenames.sort()  # 파일 이름을 오름차순으로 정렬
+
+    for filename in filenames:
+        file_path = os.path.join(directory, filename)
             processed = process_document(file_path)
             output.append(processed)
     
