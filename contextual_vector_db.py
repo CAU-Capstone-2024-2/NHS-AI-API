@@ -9,13 +9,15 @@ import google.generativeai as genai
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
+
+# .env 파일에서 환경 변수 로드
+load_dotenv()
 
 class ContextualVectorDB:
-    def __init__(self, name: str, voyage_api_key=None):
-        if voyage_api_key is None:
-            voyage_api_key = os.getenv("VOYAGE_API_KEY")
-        self.voyage_client = voyageai.Client(api_key=voyage_api_key)
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    def __init__(self, name: str):
+        self.voyage_client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
         # Create the model
         generation_config = {

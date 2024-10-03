@@ -3,11 +3,15 @@ import json
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.embeddings import VoyageEmbeddings
 from uuid import uuid4
+from dotenv import load_dotenv
+
+# .env 파일에서 환경 변수 로드
+load_dotenv()
 
 # 환경 변수에서 Voyage API 키 가져오기
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
 if not VOYAGE_API_KEY:
-    raise ValueError("VOYAGE_API_KEY 환경 변수가 설정되지 않았습니다.")
+    raise ValueError("VOYAGE_API_KEY 환경 변수가 .env 파일에 설정되지 않았습니다.")
 
 # SemanticChunker 초기화
 text_splitter = SemanticChunker(
@@ -16,7 +20,7 @@ text_splitter = SemanticChunker(
         model="voyage-3",
         show_progress_bar=True,
         max_retries=30
-    ) , breakpoint_threshold_type="percentile", breakpoint_threshold_amount=87,
+    ), breakpoint_threshold_type="percentile", breakpoint_threshold_amount=87,
 )
 
 def process_document(file_path):
