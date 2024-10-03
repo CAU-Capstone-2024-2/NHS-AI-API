@@ -21,7 +21,7 @@ text_splitter = SemanticChunker(
         show_progress_bar=True,
         batch_size = 20,
         max_retries=30
-    ), breakpoint_threshold_type="percentile", breakpoint_threshold_amount=87,
+    ), breakpoint_threshold_type="percentile", breakpoint_threshold_amount=80,
 )
 
 def process_document(file_path):

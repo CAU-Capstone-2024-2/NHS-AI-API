@@ -15,16 +15,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class ContextualVectorDB:
-    def __init__(self, name: str, voyage_api_key: str, anthropic_api_key: str):
-        self.voyage_client = voyageai.Client(api_key=voyage_api_key)
+    def __init__(self, name: str):
+        self.voyage_client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
         # Create the model
         generation_config = {
-          "temperature": 1,
-          "top_p": 0.95,
-          "top_k": 40,
-          "max_output_tokens": 8192,
+          "temperature": 0.0,
+          "max_output_tokens": 1000,
           "response_mime_type": "text/plain",
         }
 
@@ -64,11 +62,13 @@ class ContextualVectorDB:
         {chunk}
         </chunk>
 
-        Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
+        Please give a short succinct context in Korean to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
         Answer only with the succinct context and nothing else.
         """
 
         response = self.chat_session.send_message(prompt)
+        print(response.text)
+        time.sleep(4)
         return response.text, None  # Gemini doesn't provide usage details like Anthropic
 
     def load_data(self, dataset: List[Dict[str, Any]], parallel_threads: int = 1):
@@ -124,22 +124,31 @@ class ContextualVectorDB:
 
     #we use voyage AI here for embeddings. Read more here: https://docs.voyageai.com/docs/embeddings
     def _embed_and_store(self, texts: List[str], data: List[Dict[str, Any]]):
-        batch_size = 128
-        result = [
-            self.voyage_client.embed(
-                texts[i : i + batch_size],
-                model="voyage-2"
-            ).embeddings
-            for i in range(0, len(texts), batch_size)
-        ]
-        self.embeddings = [embedding for batch in result for embedding in batch]
+        batch_size = 5
+        self.embeddings = []
         self.metadata = data
+
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i : i + batch_size]
+            attempt = 0
+            while True:
+                try:
+                    result = self.voyage_client.embed(
+                        batch_texts,
+                        model="voyage-3"
+                    ).embeddings
+                    self.embeddings.extend(result)
+                    break  # Exit the retry loop if successful
+                except Exception as e:
+                    attempt += 1
+                    print(f"Embedding failed for batch {i // batch_size + 1}. Retrying in 60 seconds... (Attempt {attempt})")
+                    time.sleep(60)  # Wait for 60 seconds before retryin
 
     def search(self, query: str, k: int = 20) -> List[Dict[str, Any]]:
         if query in self.query_cache:
             query_embedding = self.query_cache[query]
         else:
-            query_embedding = self.voyage_client.embed([query], model="voyage-2").embeddings[0]
+            query_embedding = self.voyage_client.embed([query], model="voyage-3").embeddings[0]
             self.query_cache[query] = query_embedding
 
         if not self.embeddings:

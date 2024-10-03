@@ -3,6 +3,11 @@ from flask import Flask, request, jsonify
 import google.generativeai as genai
 from contextual_vector_db import ContextualVectorDB  # paste.txt에 정의된 클래스
 import pickle
+from dotenv import load_dotenv
+import json
+
+# .env 파일에서 환경 변수 로드
+load_dotenv()
 
 # 환경 변수에서 API 키 가져오기
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -10,17 +15,18 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Gemini 설정
 genai.configure(api_key=GEMINI_API_KEY)
 
+with open('data/doc.json', 'r') as f:
+    transformed_dataset = json.load(f)
+
 # ContextualVectorDB 초기화
-db = ContextualVectorDB(name="your_db_name")
+db = ContextualVectorDB(name="test_db")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
-# 예: db.load_data(your_dataset, parallel_threads=4)
+db.load_data(transformed_dataset, parallel_threads=1)
 
 # Gemini 모델 생성
 generation_config = {
-    "temperature": 0.7,
-    "top_p": 0.95,
-    "top_k": 40,
-    "max_output_tokens": 512,
+    "temperature": 0.0,
+    "max_output_tokens": 8192,
     "response_mime_type": "text/plain",
 }
 
@@ -46,10 +52,10 @@ def ask_question():
         top_docs = db.search(query=question, k=5)
 
         # 관련 문서 내용 추출
-        context = "\n\n".join([doc['metadata']['contextualized_content'] for doc in top_docs])
-
+        context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
+        print(context)
         # Gemini에 전송할 프롬프트 생성
-        prompt = f"다음 문서를 참고하여 질문에 답변해주세요:\n\n{context}\n\n질문: {question}\n답변:"
+        prompt = f"다음 문서를 참고하여 질문에 간결하게 답변해주세요:\n\n{context}\n\n질문: {question}\n답변:"
 
         # Gemini를 사용하여 답변 생성
         response = model.start_chat(history=[])
@@ -63,4 +69,4 @@ def ask_question():
 
 if __name__ == '__main__':
     # 서버 실행
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5056)
