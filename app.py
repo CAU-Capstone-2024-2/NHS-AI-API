@@ -13,7 +13,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 # ContextualVectorDB 초기화
-db = ContextualVectorDB(name="your_db_name", voyage_api_key=VOYAGE_API_KEY, anthropic_api_key=ANTHROPIC_API_KEY)
+db = ContextualVectorDB(name="your_db_name")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
 # 예: db.load_data(your_dataset, parallel_threads=4)
 

@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class ContextualVectorDB:
-    def __init__(self, name: str):
-        self.voyage_client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
+    def __init__(self, name: str, voyage_api_key: str, anthropic_api_key: str):
+        self.voyage_client = voyageai.Client(api_key=voyage_api_key)
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
         # Create the model
