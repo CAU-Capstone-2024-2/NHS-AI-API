@@ -57,7 +57,9 @@ class ContextualVectorDB:
                     "role": "user",
                     "content": prompt,
                 }
-            ]
+            ],
+            temperature=0.0,
+            max_tokens=1000
         )
         print(prompt)
         print(completion)
