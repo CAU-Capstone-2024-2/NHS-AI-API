@@ -51,7 +51,7 @@ class ContextualVectorDB:
         """
 
         completion = self.client.chat.completions.create(
-            model="google/gemini-flash-1.5-exp",
+            model="meta-llama/llama-3.1-70b-instruct:free",
             messages=[
                 {
                     "role": "user",
@@ -59,8 +59,10 @@ class ContextualVectorDB:
                 }
             ]
         )
+        print(prompt)
+        print(completion)
         print(completion.choices[0].message.content)
-        time.sleep(4)
+        time.sleep(1)
         return completion.choices[0].message.content, None
 
     def load_data(self, dataset: List[Dict[str, Any]], parallel_threads: int = 1):
