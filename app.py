@@ -2,7 +2,6 @@ import os
 from flask import Flask, request, jsonify
 import google.generativeai as genai
 from contextual_vector_db import ContextualVectorDB  # paste.txt에 정의된 클래스
-import pickle
 from dotenv import load_dotenv
 import json
 
