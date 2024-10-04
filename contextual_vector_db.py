@@ -5,7 +5,7 @@ import numpy as np
 import voyageai
 from typing import List, Dict, Any
 from tqdm import tqdm
-import google.generativeai as genai
+from openai import OpenAI
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -17,25 +17,9 @@ load_dotenv()
 class ContextualVectorDB:
     def __init__(self, name: str):
         self.voyage_client = voyageai.Client(api_key=os.getenv("VOYAGE_API_KEY"))
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-        # Create the model
-        generation_config = {
-          "temperature": 0.0,
-          "max_output_tokens": 1000,
-          "response_mime_type": "text/plain",
-        }
-
-        self.gemini_model = genai.GenerativeModel(
-          model_name="gemini-1.5-flash-002",
-          generation_config=generation_config,
-          # safety_settings = Adjust safety settings
-          # See https://ai.google.dev/gemini-api/docs/safety-settings
-        )
-
-        self.chat_session = self.gemini_model.start_chat(
-          history=[
-          ]
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
         )
         self.name = name
         self.embeddings = []
@@ -66,10 +50,18 @@ class ContextualVectorDB:
         Answer only with the succinct context and nothing else.
         """
 
-        response = self.chat_session.send_message(prompt)
-        print(response.text)
+        completion = self.client.chat.completions.create(
+            model="google/gemini-flash-1.5-exp",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+        )
+        print(completion.choices[0].message.content)
         time.sleep(4)
-        return response.text, None  # Gemini doesn't provide usage details like Anthropic
+        return completion.choices[0].message.content, None
 
     def load_data(self, dataset: List[Dict[str, Any]], parallel_threads: int = 1):
         if self.embeddings and self.metadata:
