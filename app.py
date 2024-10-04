@@ -1,18 +1,15 @@
 import os
 from flask import Flask, request, jsonify
-import google.generativeai as genai
-from contextual_vector_db import ContextualVectorDB  # paste.txt에 정의된 클래스
+from openai import OpenAI
+from contextual_vector_db import ContextualVectorDB
 from dotenv import load_dotenv
 import json
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
-# 환경 변수에서 API 키 가져오기
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# Gemini 설정
-genai.configure(api_key=GEMINI_API_KEY)
+# OpenAI 클라이언트 초기화
+client = OpenAI()
 
 with open('data/doc.json', 'r') as f:
     transformed_dataset = json.load(f)
@@ -21,19 +18,6 @@ with open('data/doc.json', 'r') as f:
 db = ContextualVectorDB(name="test_db")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
 db.load_data(transformed_dataset, parallel_threads=1)
-
-# Gemini 모델 생성
-generation_config = {
-    "temperature": 0.0,
-    "max_output_tokens": 8192,
-    "response_mime_type": "text/plain",
-}
-
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-pro-002",
-    generation_config=generation_config,
-    # safety_settings 등 추가 설정 가능
-)
 
 # Flask 애플리케이션 초기화
 app = Flask(__name__)
@@ -53,13 +37,37 @@ def ask_question():
         # 관련 문서 내용 추출
         context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
         print(context)
-        # Gemini에 전송할 프롬프트 생성
-        prompt = f"다음 문서를 참고하여 질문에 간결하게 답변해주세요:\n\n{context}\n\n질문: {question}\n답변:"
 
-        # Gemini를 사용하여 답변 생성
-        response = model.start_chat(history=[])
-        response = response.send_message(prompt)
-        answer = response.text.strip()
+        # GPT-4o에 전송할 메시지 생성
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Respond to a question from an elderly person using a provided document as a reference. The response should be concise and written in Korean, formatted in a way that is easy for elderly individuals to understand."
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "content": f"문서: {context}\n\n질문: {question}"
+            }
+        ]
+
+        # GPT-4o를 사용하여 답변 생성
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            temperature=0,
+            max_tokens=8192,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+            response_format={"type": "text"}
+        )
+
+        answer = response.choices[0].message.content.strip()
 
         return jsonify({"answer": answer})
 
