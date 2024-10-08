@@ -32,9 +32,14 @@ def ask_question():
     if not question or not session_id or not uid:
         return jsonify({"error": "질문, sessionId, uid를 모두 입력해주세요."}), 400
 
-    try:
-        # 질문과 관련된 상위 5개 문서 검색
-        top_docs = db.search(query=question, k=5)
+    # Immediately return 200 status code
+    response = jsonify({"message": "응답이 성공적으로 처리되었습니다."})
+    response.status_code = 200
+
+    def process_question():
+        try:
+            # 질문과 관련된 상위 5개 문서 검색
+            top_docs = db.search(query=question, k=5)
 
         # 관련 문서 내용 추출
         context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
@@ -80,36 +85,40 @@ Begin your response now:
             }
         ]
 
-        # GPT-4o를 사용하여 답변 생성
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0,
-            max_tokens=8192,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-            response_format={"type": "text"}
-        )
+            # GPT-4o를 사용하여 답변 생성
+            gpt_response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0,
+                max_tokens=8192,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                response_format={"type": "text"}
+            )
 
-        answer = response.choices[0].message.content.strip()
+            answer = gpt_response.choices[0].message.content.strip()
 
-        # 외부 API에 응답 전송
-        external_api_url = "http://100.99.151.44.119:1500/ask"
-        external_api_data = {
-            "sessionId": session_id,
-            "uid": uid,
-            "answer": answer
-        }
-        external_response = requests.post(external_api_url, json=external_api_data)
+            # 외부 API에 응답 전송
+            external_api_url = "http://100.99.151.44:1500/ask"
+            external_api_data = {
+                "sessionId": session_id,
+                "uid": uid,
+                "answer": answer
+            }
+            try:
+                requests.post(external_api_url, json=external_api_data)
+            except Exception as e:
+                print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
-        if external_response.status_code == 200:
-            return jsonify({"message": "응답이 성공적으로 처리되었습니다."}), 200
-        else:
-            return jsonify({"error": "외부 API 호출 중 오류가 발생했습니다."}), 500
+        except Exception as e:
+            print(f"질문 처리 중 오류 발생: {str(e)}")
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # 비동기 작업 시작
+    from threading import Thread
+    Thread(target=process_question).start()
+
+    return response
 
 if __name__ == '__main__':
     # 서버 실행
