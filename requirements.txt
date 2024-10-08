@@ -1,0 +1,8 @@
+Flask
+openai
+python-dotenv
+numpy
+voyageai
+tqdm
+langchain-experimental
+langchain-community
