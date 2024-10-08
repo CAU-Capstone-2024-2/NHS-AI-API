@@ -51,7 +51,7 @@ class ContextualVectorDB:
         """
 
         completion = self.client.chat.completions.create(
-            model="meta-llama/llama-3.1-70b-instruct:free",
+            model="google/gemini-flash-1.5",
             messages=[
                 {
                     "role": "user",
@@ -61,10 +61,7 @@ class ContextualVectorDB:
             temperature=0.0,
             max_tokens=1000
         )
-        print(prompt)
-        print(completion)
         print(completion.choices[0].message.content)
-        time.sleep(1)
         return completion.choices[0].message.content, None
 
     def load_data(self, dataset: List[Dict[str, Any]], parallel_threads: int = 1):
@@ -120,7 +117,7 @@ class ContextualVectorDB:
 
     #we use voyage AI here for embeddings. Read more here: https://docs.voyageai.com/docs/embeddings
     def _embed_and_store(self, texts: List[str], data: List[Dict[str, Any]]):
-        batch_size = 5
+        batch_size = 128
         self.embeddings = []
         self.metadata = data
 

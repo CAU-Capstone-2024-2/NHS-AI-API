@@ -25,12 +25,12 @@ app = Flask(__name__)
 @app.route('/ask', methods=['POST'])
 def ask_question():
     data = request.get_json()
-    question = data.get('question', '')
     session_id = data.get('sessionId', '')
     uid = data.get('uid', '')
+    question = data.get('question', '')
 
     if not question or not session_id or not uid:
-        return jsonify({"error": "질문, sessionId, uid를 모두 입력해주세요."}), 400
+        return jsonify({"error": "sessionId, uid, question를 모두 입력해주세요."}), 400
 
     # Immediately return 200 status code
     response = jsonify({"message": "응답이 성공적으로 처리되었습니다."})
@@ -107,7 +107,8 @@ Begin your response now:
                 "answer": answer
             }
             try:
-                requests.post(external_api_url, json=external_api_data)
+                response = requests.post(external_api_url, json=external_api_data)
+                print(response.text)
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 

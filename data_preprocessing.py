@@ -19,7 +19,7 @@ text_splitter = SemanticChunker(
         voyage_api_key=VOYAGE_API_KEY,
         model="voyage-3",
         show_progress_bar=True,
-        batch_size = 20,
+        batch_size = 128,
         max_retries=30
     ), breakpoint_threshold_type="percentile", breakpoint_threshold_amount=80,
 )
