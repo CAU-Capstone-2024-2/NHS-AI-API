@@ -3,6 +3,7 @@ from openai import OpenAI
 from contextual_vector_db import ContextualVectorDB
 from dotenv import load_dotenv
 import json
+import requests
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
@@ -25,9 +26,11 @@ app = Flask(__name__)
 def ask_question():
     data = request.get_json()
     question = data.get('question', '')
+    session_id = data.get('sessionId', '')
+    uid = data.get('uid', '')
 
-    if not question:
-        return jsonify({"error": "질문을 입력해주세요."}), 400
+    if not question or not session_id or not uid:
+        return jsonify({"error": "질문, sessionId, uid를 모두 입력해주세요."}), 400
 
     try:
         # 질문과 관련된 상위 5개 문서 검색
@@ -91,7 +94,19 @@ Begin your response now:
 
         answer = response.choices[0].message.content.strip()
 
-        return jsonify({"answer": answer})
+        # 외부 API에 응답 전송
+        external_api_url = "http://100.99.151.44.119:1500/ask"
+        external_api_data = {
+            "sessionId": session_id,
+            "uid": uid,
+            "answer": answer
+        }
+        external_response = requests.post(external_api_url, json=external_api_data)
+
+        if external_response.status_code == 200:
+            return jsonify({"message": "응답이 성공적으로 처리되었습니다."}), 200
+        else:
+            return jsonify({"error": "외부 API 호출 중 오류가 발생했습니다."}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
