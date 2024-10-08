@@ -1,4 +1,3 @@
-import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
 from contextual_vector_db import ContextualVectorDB
@@ -17,7 +16,7 @@ with open('data/doc.json', 'r') as f:
 # ContextualVectorDB 초기화
 db = ContextualVectorDB(name="test_db")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
-db.load_data(transformed_dataset, parallel_threads=1)
+db.load_data(transformed_dataset, parallel_threads=4)
 
 # Flask 애플리케이션 초기화
 app = Flask(__name__)
@@ -41,17 +40,40 @@ def ask_question():
         # GPT-4o에 전송할 메시지 생성
         messages = [
             {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Respond to a question from an elderly person using a provided document as a reference. The response should be concise and written in Korean, formatted in a way that is easy for elderly individuals to understand."
-                    }
-                ]
-            },
-            {
                 "role": "user",
-                "content": f"문서: {context}\n\n질문: {question}"
+                "content": f"""
+You are an AI assistant designed to help elderly people by answering their questions in a clear and concise manner. Your task is to read a given document, understand the question asked, and provide a simple, easy-to-understand answer in Korean.
+
+Here is the document you should use as a reference:
+
+<document>
+{context}
+</document>
+
+An elderly person has asked the following question:
+
+<question>
+{question}
+</question>
+
+Please follow these steps:
+
+1. Carefully read and analyze the document.
+2. Identify the key information in the document that relates to the question.
+3. Formulate a concise answer that directly addresses the question.
+4. Ensure your answer is simple and easy for an elderly person to understand.
+5. If the document doesn't contain information to fully answer the question, state this clearly and provide whatever relevant information you can from the document.
+
+When writing your response:
+- Use simple, clear language
+- Avoid complex terms or jargon
+- Keep sentences short and to the point
+- Be respectful and patient in your tone
+
+Please provide your answer in Korean, formatted as plain text without any special formatting or tags. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
+
+Begin your response now:
+                """
             }
         ]
 
