@@ -41,15 +41,15 @@ def ask_question():
             # 질문과 관련된 상위 5개 문서 검색
             top_docs = db.search(query=question, k=5)
 
-        # 관련 문서 내용 추출
-        context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
-        print(context)
+            # 관련 문서 내용 추출
+            context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
+            print(context)
 
-        # GPT-4o에 전송할 메시지 생성
-        messages = [
-            {
-                "role": "user",
-                "content": f"""
+            # GPT-4o에 전송할 메시지 생성
+            messages = [
+                {
+                    "role": "user",
+                    "content": f"""
 You are an AI assistant designed to help elderly people by answering their questions in a clear and concise manner. Your task is to read a given document, understand the question asked, and provide a simple, easy-to-understand answer in Korean.
 
 Here is the document you should use as a reference:
@@ -81,9 +81,9 @@ When writing your response:
 Please provide your answer in Korean, formatted as plain text without any special formatting or tags. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
 
 Begin your response now:
-                """
-            }
-        ]
+                    """
+                }
+            ]
 
             # GPT-4o를 사용하여 답변 생성
             gpt_response = client.chat.completions.create(
