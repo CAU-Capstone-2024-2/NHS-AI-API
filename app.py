@@ -180,15 +180,52 @@ Begin your response now:
             gpt_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                temperature=0,
-                max_tokens=8192,
+                temperature=1,
+                max_tokens=2048,
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0,
-                response_format={"type": "text"}
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "poster_template",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "template_type": {
+                                    "type": "string", 
+                                    "description": "The type of the poster template used.",
+                                    "enum": ["template_1"]
+                                },
+                                "content": {
+                                    "anyOf": [{
+                                        "type": "object",
+                                        "properties": {
+                                            "question_1": {
+                                                "type": "string",
+                                                "description": "The first question for template 1."
+                                            },
+                                            "answer_1": {
+                                                "type": "string",
+                                                "description": "The answer to the first question."
+                                            }
+                                        },
+                                        "required": ["question_1", "answer_1"],
+                                        "additionalProperties": False
+                                    }]
+                                }
+                            },
+                            "required": ["template_type", "content"],
+                            "additionalProperties": False
+                        }
+                    }
+                }
             )
 
-            answer = gpt_response.choices[0].message.content.strip()
+            # Parse the JSON response
+            response_data = json.loads(gpt_response.choices[0].message.content)
+            answer = response_data["content"]["answer_1"]
 
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
