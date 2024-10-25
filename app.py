@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from openai import OpenAI
 from contextual_vector_db import ContextualVectorDB
 from dotenv import load_dotenv
 import json
 import requests
+from typing import Optional
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
@@ -19,24 +21,20 @@ db = ContextualVectorDB(name="test_db")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
 db.load_data(transformed_dataset, parallel_threads=4)
 
-# Flask 애플리케이션 초기화
-app = Flask(__name__)
+# FastAPI 애플리케이션 초기화
+app = FastAPI()
 
-@app.route('/ask', methods=['POST'])
-def ask_question():
-    data = request.get_json()
-    session_id = data.get('sessionId', '')
-    uid = data.get('uid', '')
-    question = data.get('question', '')
+class QuestionRequest(BaseModel):
+    sessionId: str
+    uid: str
+    question: str
 
-    if not question or not session_id or not uid:
-        return jsonify({"error": "sessionId, uid, question를 모두 입력해주세요."}), 400
+@app.post('/ask')
+async def ask_question(request: QuestionRequest, background_tasks: BackgroundTasks):
+    if not request.question or not request.sessionId or not request.uid:
+        raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
 
-    # Immediately return 200 status code
-    response = jsonify({"message": "응답이 성공적으로 처리되었습니다."})
-    response.status_code = 200
-
-    def process_question():
+    async def process_question(session_id: str, uid: str, question: str):
         try:
             # 질문과 관련된 상위 5개 문서 검색
             top_docs = db.search(query=question, k=5)
@@ -137,6 +135,10 @@ Begin your response now:
 
     return response
 
+    # Add the background task and return response
+    background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
+    return {"message": "응답이 성공적으로 처리되었습니다."}
+
 if __name__ == '__main__':
-    # 서버 실행
-    app.run(host='0.0.0.0', port=5056)
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=5056)
