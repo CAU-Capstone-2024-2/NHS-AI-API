@@ -223,14 +223,15 @@ Begin your response now:
                 }
             )
 
-            answer = gpt_response.choices[0].message.content.strip()
+            # Get the raw JSON response
+            raw_response = gpt_response.choices[0].message.content
 
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
-                "answer": answer,
+                "answer": raw_response,
                 "status_code": 200  # Successful processing
             }
             try:
