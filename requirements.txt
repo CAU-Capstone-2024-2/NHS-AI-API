@@ -1,8 +1,11 @@
-Flask
+fastapi
+pydantic
 openai
 python-dotenv
 numpy
 voyageai
+requests
 tqdm
 langchain-experimental
 langchain-community
+uuid
