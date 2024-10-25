@@ -40,8 +40,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             messages = [
                 {
                     "role": "user",
-                    "content": f"""Given the following question from an elderly person, generate three clarifying questions in Korean that would help better understand their needs:
-
+                    "content": f"""Given the following question from an elderly person, generate three more specific questions about the topic in Korean:
 Question: {question}
 
 Please generate questions that are:
@@ -53,7 +52,7 @@ Please generate questions that are:
             ]
 
             gpt_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=messages,
                 temperature=1,
                 max_tokens=2048,
@@ -180,8 +179,8 @@ Begin your response now:
             gpt_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                temperature=1,
-                max_tokens=2048,
+                temperature=0,
+                max_tokens=8192,
                 top_p=1,
                 frequency_penalty=0,
                 presence_penalty=0,
@@ -225,7 +224,7 @@ Begin your response now:
 
             # Get the raw JSON response
             raw_response = gpt_response.choices[0].message.content
-
+            print(raw_response)
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
