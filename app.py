@@ -86,7 +86,7 @@ Please generate questions that are:
 
             # Extract the clarifying questions from the response
             clarifying_questions = gpt_response.choices[0].message.content
-            
+            print(clarifying_questions)
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
