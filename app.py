@@ -223,9 +223,7 @@ Begin your response now:
                 }
             )
 
-            # Parse the JSON response
-            response_data = json.loads(gpt_response.choices[0].message.content)
-            answer = response_data["content"]["answer_1"]
+            answer = gpt_response.choices[0].message.content.strip()
 
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
