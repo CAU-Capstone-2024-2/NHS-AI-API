@@ -106,7 +106,8 @@ Begin your response now:
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
-                "answer": answer
+                "answer": answer,
+                "status_code": 200  # Successful processing
             }
             try:
                 response = requests.post(external_api_url, json=external_api_data)
@@ -115,7 +116,20 @@ Begin your response now:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
         except Exception as e:
-            print(f"질문 처리 중 오류 발생: {str(e)}")
+            error_message = f"질문 처리 중 오류 발생: {str(e)}"
+            print(error_message)
+            # Send error status to external API
+            external_api_data = {
+                "sessionId": session_id,
+                "uid": uid,
+                "answer": error_message,
+                "status_code": 500  # Internal server error
+            }
+            try:
+                response = requests.post(external_api_url, json=external_api_data)
+                print(response.text)
+            except Exception as e:
+                print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
     # 비동기 작업 시작
     from threading import Thread
