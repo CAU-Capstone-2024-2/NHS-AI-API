@@ -27,12 +27,6 @@ class ContextualVectorDB:
         self.query_cache = {}
         self.db_path = f"./data/{name}/contextual_vector_db.pkl"
 
-        self.token_counts = {
-            'input': 0,
-            'output': 0,
-            'cache_read': 0,
-            'cache_creation': 0
-        }
         self.token_lock = threading.Lock()
 
     def situate_context(self, doc: str, chunk: str) -> tuple[str, Any]:
@@ -51,7 +45,7 @@ class ContextualVectorDB:
         """
 
         completion = self.client.chat.completions.create(
-            model="google/gemini-flash-1.5",
+            model="google/gemini-flash-1.5-8b",
             messages=[
                 {
                     "role": "user",
@@ -156,6 +150,7 @@ class ContextualVectorDB:
                 "metadata": self.metadata[idx],
                 "similarity": float(similarities[idx]),
             }
+            print(similarities[idx])
             top_results.append(result)
         return top_results
 

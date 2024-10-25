@@ -42,7 +42,9 @@ def ask_question():
             top_docs = db.search(query=question, k=5)
 
             # 관련 문서 내용 추출
-            context = "\n\n".join([doc['metadata']['original_content'] for doc in top_docs])
+            context = ""
+            for doc in top_docs:
+                context += f"문맥:{doc['metadata']['contextualized_content']}{doc['metadata']['original_content']}\n\n"
             print(context)
 
             # GPT-4o에 전송할 메시지 생성
@@ -87,7 +89,7 @@ Begin your response now:
 
             # GPT-4o를 사용하여 답변 생성
             gpt_response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=messages,
                 temperature=0,
                 max_tokens=8192,
@@ -100,7 +102,7 @@ Begin your response now:
             answer = gpt_response.choices[0].message.content.strip()
 
             # 외부 API에 응답 전송
-            external_api_url = "http://100.99.151.44:1500/ask"
+            external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
