@@ -29,6 +29,97 @@ class QuestionRequest(BaseModel):
     uid: str
     question: str
 
+@app.post('/qsmaker')
+async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
+    if not request.question or not request.sessionId or not request.uid:
+        raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
+
+    async def process_clarifying_questions(session_id: str, uid: str, question: str):
+        try:
+            # GPT-4o를 사용하여 명확한 질문 생성
+            messages = [
+                {
+                    "role": "user",
+                    "content": f"""Given the following question from an elderly person, generate three clarifying questions in Korean that would help better understand their needs:
+
+Question: {question}
+
+Please generate questions that are:
+1. Simple and easy to understand
+2. Directly related to the original question
+3. Help clarify any ambiguous parts of the question
+"""
+                }
+            ]
+
+            gpt_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=1,
+                max_tokens=2048,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "clarifying_questions",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "clarifying_questions": {
+                                    "type": "array",
+                                    "description": "A list of three questions generated to clarify the question.",
+                                    "items": {
+                                        "type": "string",
+                                        "description": "Each clarifying question."
+                                    }
+                                }
+                            },
+                            "required": ["clarifying_questions"],
+                            "additionalProperties": False
+                        }
+                    }
+                }
+            )
+
+            # Extract the clarifying questions from the response
+            clarifying_questions = gpt_response.choices[0].message.content
+            
+            # 외부 API에 응답 전송
+            external_api_url = "http://100.99.151.44:1500/api/answer"
+            external_api_data = {
+                "sessionId": session_id,
+                "uid": uid,
+                "answer": clarifying_questions,
+                "status_code": 200
+            }
+            try:
+                response = requests.post(external_api_url, json=external_api_data)
+                print(response.text)
+            except Exception as e:
+                print(f"외부 API 호출 중 오류 발생: {str(e)}")
+
+        except Exception as e:
+            error_message = f"질문 처리 중 오류 발생: {str(e)}"
+            print(error_message)
+            external_api_data = {
+                "sessionId": session_id,
+                "uid": uid,
+                "answer": error_message,
+                "status_code": 500
+            }
+            try:
+                response = requests.post(external_api_url, json=external_api_data)
+                print(response.text)
+            except Exception as e:
+                print(f"외부 API 호출 중 오류 발생: {str(e)}")
+
+    # Add the background task and return response
+    background_tasks.add_task(process_clarifying_questions, request.sessionId, request.uid, request.question)
+    return {"message": "응답이 성공적으로 처리되었습니다."}
+
 @app.post('/ask')
 async def ask_question(request: QuestionRequest, background_tasks: BackgroundTasks):
     if not request.question or not request.sessionId or not request.uid:
