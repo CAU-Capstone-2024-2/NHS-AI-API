@@ -130,11 +130,6 @@ Begin your response now:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
     # 비동기 작업 시작
-    from threading import Thread
-    Thread(target=process_question).start()
-
-    return response
-
     # Add the background task and return response
     background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
     return {"message": "응답이 성공적으로 처리되었습니다."}
