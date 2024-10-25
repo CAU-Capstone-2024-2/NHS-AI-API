@@ -107,9 +107,7 @@ class ContextualVectorDB:
 
         #logging token usage
         print(f"Contextual Vector database loaded and saved. Total chunks processed: {len(texts_to_embed)}")
-        # We can't log token usage with Gemini
 
-    #we use voyage AI here for embeddings. Read more here: https://docs.voyageai.com/docs/embeddings
     def _embed_and_store(self, texts: List[str], data: List[Dict[str, Any]]):
         batch_size = 128
         self.embeddings = []
