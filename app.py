@@ -258,8 +258,9 @@ Begin your response now:
                 "status_code": 500  # Internal server error
             }
             try:
-                response = requests.post(external_api_url, json=external_api_data)
-                print(response.text)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
