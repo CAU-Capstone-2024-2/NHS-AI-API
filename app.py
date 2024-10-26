@@ -4,7 +4,7 @@ from openai import OpenAI
 from contextual_vector_db import ContextualVectorDB
 from dotenv import load_dotenv
 import json
-import requests
+import aiohttp
 from typing import Optional
 
 # .env 파일에서 환경 변수 로드
@@ -100,8 +100,9 @@ Please generate questions that are:
                 "status_code": 200
             }
             try:
-                response = requests.post(external_api_url, json=external_api_data)
-                print(response.text)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
@@ -115,8 +116,9 @@ Please generate questions that are:
                 "status_code": 500
             }
             try:
-                response = requests.post(external_api_url, json=external_api_data)
-                print(response.text)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
@@ -239,8 +241,9 @@ Begin your response now:
                 "status_code": 200  # Successful processing
             }
             try:
-                response = requests.post(external_api_url, json=external_api_data)
-                print(response.text)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
