@@ -9,3 +9,4 @@ tqdm
 langchain-experimental
 langchain-community
 uuid
+aiohttp
