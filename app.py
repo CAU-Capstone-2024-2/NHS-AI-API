@@ -88,14 +88,15 @@ Please generate questions that are:
             )
 
             # Extract the clarifying questions from the response
-            clarifying_questions = gpt_response.choices[0].message.content
+            response_json = json.loads(gpt_response.choices[0].message.content)
+            clarifying_questions = response_json["clarifying_questions"]
             print(clarifying_questions)
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
-                "answer": clarifying_questions,
+                "clarifying_questions": clarifying_questions,
                 "status_code": 200
             }
             try:
