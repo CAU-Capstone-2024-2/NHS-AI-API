@@ -40,8 +40,12 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             messages = [
                 {
                     "role": "user",
-                    "content": f"""Given the following question from an elderly person, generate three more specific questions about the topic in Korean:
+                    "content": f"""Given the following question from an elderly person, generate three more specific questions in Korean that include a question from an elderly person.:
 Question: {question}
+
+Example)
+Question: 만성 C형간염을 어떨 때 치료해야하나요?
+Answer: "clarifying_questions":["1. 만성 C형간염 치료가 필요한 증상이나 징후는 무엇인가요?","2. 만성 C형간염 치료를 시작하기에 적절한 시기는 언제인가요?","3. 만성 C형간염을 치료하지 않으면 어떤 위험이 있을까요?"]
 
 Please generate questions that are:
 1. Simple and easy to understand
@@ -52,9 +56,9 @@ Please generate questions that are:
             ]
 
             gpt_response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=messages,
-                temperature=1,
+                temperature=0.4,
                 max_tokens=2048,
                 top_p=1,
                 frequency_penalty=0,
@@ -195,22 +199,22 @@ Begin your response now:
                                 "template_type": {
                                     "type": "string", 
                                     "description": "The type of the poster template used.",
-                                    "enum": ["template_1"]
+                                    "enum": ["qna__square_single"]
                                 },
                                 "content": {
                                     "anyOf": [{
                                         "type": "object",
                                         "properties": {
-                                            "question_1": {
+                                            "question": {
                                                 "type": "string",
                                                 "description": "The first question for template 1."
                                             },
-                                            "answer_1": {
+                                            "answer": {
                                                 "type": "string",
                                                 "description": "The answer to the first question."
                                             }
                                         },
-                                        "required": ["question_1", "answer_1"],
+                                        "required": ["question", "answer"],
                                         "additionalProperties": False
                                     }]
                                 }
