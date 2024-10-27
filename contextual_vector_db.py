@@ -72,14 +72,17 @@ class ContextualVectorDB:
         total_chunks = sum(len(doc['chunks']) for doc in dataset)
 
         def process_chunk(doc, chunk):
-            #for each chunk, produce the context
-            contextualized_text, usage = self.situate_context(doc['content'], chunk['content'])
+            if 'doc_0' in chunk['chunk_id']:
+                # Skip situate_context for doc_0
+                contextualized_text = ""
+            else:
+                # For each chunk, produce the context
+                contextualized_text, usage = self.situate_context(doc['content'], chunk['content'])
+            
             with self.token_lock:
-                # Gemini doesn't provide usage details, so we can't track tokens
-                
                 return {
-                #append the context to the original text chunk
-                'text_to_embed': f"{chunk['content']}\n\n{contextualized_text}",
+                # Append the context to the original text chunk
+                'text_to_embed': chunk['content'] if chunk['chunk_id'] == 'doc_0' else f"{chunk['content']}\n\n{contextualized_text}",
                 'metadata': {
                     'doc_id': doc['doc_id'],
                     'original_uuid': doc['original_uuid'],
@@ -105,7 +108,6 @@ class ContextualVectorDB:
         self._embed_and_store(texts_to_embed, metadata)
         self.save_db()
 
-        #logging token usage
         print(f"Contextual Vector database loaded and saved. Total chunks processed: {len(texts_to_embed)}")
 
     def _embed_and_store(self, texts: List[str], data: List[Dict[str, Any]]):
