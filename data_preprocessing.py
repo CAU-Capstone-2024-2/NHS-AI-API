@@ -96,41 +96,73 @@ def process_xml_content(element, chunks, full_content):
                 chunks.append(content)
 
 def process_document(file_path, doc_number):
-    tree = ET.parse(file_path)
-    root = tree.getroot()
-    
-    chunks = []
-    full_content = []
-    process_xml_content(root, chunks, full_content)
-    
-    doc_id = f"doc_{doc_number}"
-    original_uuid = uuid4().hex
-    
-    processed_chunks = []
-    for idx, chunk_content in enumerate(chunks):
-        if chunk_content:  # Check if content is not empty
-            chunk = {
-                "chunk_id": f"{doc_id}_chunk_{idx}",
-                "original_index": idx,
-                "content": chunk_content
-            }
-            processed_chunks.append(chunk)
-    
-    result = {
-        "doc_id": doc_id,
-        "original_uuid": original_uuid,
-        "content": "\n\n".join(full_content),
-        "chunks": processed_chunks
-    }
-    
-    return result
+    if file_path.endswith('.xml'):
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        chunks = []
+        full_content = []
+        process_xml_content(root, chunks, full_content)
+        
+        doc_id = f"doc_{doc_number}"
+        original_uuid = uuid4().hex
+        
+        processed_chunks = []
+        for idx, chunk_content in enumerate(chunks):
+            if chunk_content:  # Check if content is not empty
+                chunk = {
+                    "chunk_id": f"{doc_id}_chunk_{idx}",
+                    "original_index": idx,
+                    "content": chunk_content
+                }
+                processed_chunks.append(chunk)
+        
+        result = {
+            "doc_id": doc_id,
+            "original_uuid": original_uuid,
+            "content": "\n\n".join(full_content),
+            "chunks": processed_chunks
+        }
+        
+        return result
+    elif file_path.endswith('.json'):
+        with open(file_path, 'r', encoding='utf-8') as json_file:
+            word_dict = json.load(json_file)
+        
+        chunks = []
+        for idx, content in enumerate(word_dict):
+            chunks.append(content)
+        
+        doc_id = "doc_0"
+        original_uuid = uuid4().hex
+        
+        processed_chunks = []
+        for idx, chunk_content in enumerate(chunks):
+            if chunk_content:  # Check if content is not empty
+                chunk = {
+                    "chunk_id": f"{doc_id}_chunk_{idx}",
+                    "original_index": idx,
+                    "content": chunk_content
+                }
+                processed_chunks.append(chunk)
+        
+        result = {
+            "doc_id": doc_id,
+            "original_uuid": original_uuid,
+            "content": "\n\n".join(chunks),
+            "chunks": processed_chunks
+        }
+        
+        return result
+    else:
+        raise ValueError(f"Unsupported file type: {file_path}")
 
 def main():
     directory = './data/documents'
     output = []
     
-    filenames = [f for f in os.listdir(directory) if f.endswith('.xml')]
-    filenames.sort()
+    filenames = [f for f in os.listdir(directory) if f.endswith(('.xml', '.json'))]
+    filenames.sort(key=lambda x: (not x.endswith('.json'), x))  # Prioritize .json files
 
     for idx, filename in enumerate(filenames, 1):
         file_path = os.path.join(directory, filename)
