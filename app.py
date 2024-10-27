@@ -139,7 +139,11 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
             # 관련 문서 내용 추출
             context = ""
             for doc in top_docs:
-                context += f"문맥:{doc['metadata']['contextualized_content']}{doc['metadata']['original_content']}\n\n"
+                if doc['metadata']['contextualized_content'] == "":
+                    context += f"{doc['metadata']['original_content']}\n\n"
+                else:
+                    context += f"문맥:{doc['metadata']['contextualized_content']}{doc['metadata']['original_content']}\n\n"
+
             print(context)
 
             # GPT-4o에 전송할 메시지 생성
