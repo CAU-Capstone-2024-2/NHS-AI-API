@@ -26,7 +26,8 @@ class ContextualVectorDB:
         self.metadata = []
         self.query_cache = {}
         self.db_path = f"./data/{name}/contextual_vector_db.pkl"
-
+        self.checkpoint_path = f"./data/{name}/checkpoint.pkl"
+        
         self.token_lock = threading.Lock()
 
     def situate_context(self, doc: str, chunk: str) -> tuple[str, Any]:
@@ -67,8 +68,18 @@ class ContextualVectorDB:
             self.load_db()
             return
 
-        texts_to_embed = []
-        metadata = []
+        # Check for checkpoint
+        checkpoint = self._load_checkpoint()
+        if checkpoint:
+            texts_to_embed = checkpoint['texts_to_embed']
+            metadata = checkpoint['metadata']
+            processed_chunks = checkpoint['processed_chunks']
+            print(f"Resuming from checkpoint with {len(processed_chunks)} processed chunks")
+        else:
+            texts_to_embed = []
+            metadata = []
+            processed_chunks = set()
+
         total_chunks = sum(len(doc['chunks']) for doc in dataset)
 
         def process_chunk(doc, chunk):
@@ -98,12 +109,19 @@ class ContextualVectorDB:
             futures = []
             for doc in dataset:
                 for chunk in doc['chunks']:
-                    futures.append(executor.submit(process_chunk, doc, chunk))
+                    chunk_id = f"{doc['doc_id']}_{chunk['chunk_id']}"
+                    if chunk_id not in processed_chunks:
+                        futures.append(executor.submit(process_chunk, doc, chunk))
             
-            for future in tqdm(as_completed(futures), total=total_chunks, desc="Processing chunks"):
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing chunks"):
                 result = future.result()
                 texts_to_embed.append(result['text_to_embed'])
                 metadata.append(result['metadata'])
+                processed_chunks.add(f"{result['metadata']['doc_id']}_{result['metadata']['chunk_id']}")
+                
+                # Save checkpoint every 10 chunks
+                if len(processed_chunks) % 10 == 0:
+                    self._save_checkpoint(texts_to_embed, metadata, processed_chunks)
 
         self._embed_and_store(texts_to_embed, metadata)
         self.save_db()
@@ -172,3 +190,23 @@ class ContextualVectorDB:
         self.embeddings = data["embeddings"]
         self.metadata = data["metadata"]
         self.query_cache = json.loads(data["query_cache"])
+
+    def _save_checkpoint(self, texts_to_embed, metadata, processed_chunks):
+        checkpoint_data = {
+            'texts_to_embed': texts_to_embed,
+            'metadata': metadata,
+            'processed_chunks': processed_chunks
+        }
+        os.makedirs(os.path.dirname(self.checkpoint_path), exist_ok=True)
+        with open(self.checkpoint_path, 'wb') as f:
+            pickle.dump(checkpoint_data, f)
+
+    def _load_checkpoint(self):
+        if os.path.exists(self.checkpoint_path):
+            try:
+                with open(self.checkpoint_path, 'rb') as f:
+                    return pickle.load(f)
+            except Exception as e:
+                print(f"Error loading checkpoint: {e}")
+                return None
+        return None
