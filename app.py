@@ -38,44 +38,55 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
         try:
             # 질문과 관련된 문서 검색
             top_docs = db.search(query=question, k=1)
-            
+
             # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
-            if not top_docs or top_docs[0]['similarity'] < 0.2:
+            if not top_docs or top_docs[0]['similarity'] < 0.35:
                 external_api_url = "http://100.99.151.44:1500/api/answer"
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
-                    "answer": "This is an unanswerable question.",
+                    "answer": "현재 저는 건강에 대한 정보 제공을 중점적으로 하고 있어요. 혹시 도움이 필요하시면 건강 관련 질문을 해주세요!",
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
                     async with session.post(external_api_url, json=external_api_data) as response:
                         print(await response.text())
                 return
-
             # GPT-4o를 사용하여 명확한 질문 생성
             messages = [
                 {
                     "role": "user",
-                    "content": f"""Given the following question from an elderly person, generate three more specific questions in Korean that include a question from an elderly person.:
-Question: {question}
+                    "content": f"""You are an AI assistant tasked with creating specific questions to help find health information for elderly users. Your goal is to take a user's general health-related question and create three more specific questions in Korean that will help in searching for relevant health information.
 
-Example)
-Question: 만성 C형간염을 어떨 때 치료해야하나요?
-Answer: "clarifying_questions":["1. 만성 C형간염 치료가 필요한 증상이나 징후는 무엇인가요?","2. 만성 C형간염 치료를 시작하기에 적절한 시기는 언제인가요?","3. 만성 C형간염을 치료하지 않으면 어떤 위험이 있을까요?"]
+                    Here is the user's question:
+                    <user_question>
+                    {question}
+                    </user_question>
 
-Please generate questions that are:
-1. Simple and easy to understand
-2. Directly related to the original question
-3. Help clarify any ambiguous parts of the question
+                    Analyze the user's question to determine if it is related to health information for the elderly. If it is, follow these steps:
+
+                    1. Identify the main health topic or concern in the user's question.
+                    2. Consider what additional information would be helpful to provide a comprehensive answer.
+                    3. Think about how to break down the question into more specific aspects of the health issue.
+
+                    Based on your analysis, create three questions that:
+                    - Are more specific than the original question
+                    - Focus on different aspects of the health topic
+                    - Are formulated as document-searching questions (not questions you would ask the elderly person directly)
+                    - Do not include numbering at the beginning of each question
+
+                    If the user's question is not related to health information for the elderly, do not create any questions.
+
+                    Provide your response in the following format:
+                    [Insert the three questions here, each on a new line. If the original question is not health-related, leave this section empty.]
 """
                 }
             ]
 
             gpt_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=messages,
-                temperature=0.4,
+                temperature=0.2,
                 max_tokens=2048,
                 top_p=1,
                 frequency_penalty=0,
@@ -105,7 +116,9 @@ Please generate questions that are:
             )
 
             # Extract the clarifying questions from the response
+            print(gpt_response.choices[0].message.content)
             response_json = json.loads(gpt_response.choices[0].message.content)
+            print(response_json)
             clarifying_questions = response_json["clarifying_questions"]
             print(clarifying_questions)
 
@@ -115,12 +128,17 @@ Please generate questions that are:
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
-                    "answer": "This is an unanswerable question.",
+                    "answer": "현재 저는 건강에 대한 정보 제공을 중점적으로 하고 있어요. 혹시 도움이 필요하시면 건강 관련 질문을 해주세요!",
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
                     async with session.post(external_api_url, json=external_api_data) as response:
-                        print(await response.text())
+                        try:
+                            result = await response.json()
+                            print("Response:", result)
+                        except json.JSONDecodeError as e:
+                            print("JSON Parsing Error:", e)
+                            print("Raw response:", await response.text())
                 return
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
@@ -235,7 +253,7 @@ Begin your response now:
                             "type": "object",
                             "properties": {
                                 "template_type": {
-                                    "type": "string", 
+                                    "type": "string",
                                     "description": "The type of the poster template used.",
                                     "enum": ["qna__square_single"]
                                 },
