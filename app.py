@@ -29,6 +29,9 @@ class QuestionRequest(BaseModel):
     uid: str
     question: str
 
+# Define the external API URL as a constant
+EXTERNAL_API_URL = "http://100.99.151.44:1500/api/answer"
+
 @app.post('/qsmaker')
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
     if not request.question or not request.sessionId or not request.uid:
@@ -41,7 +44,6 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
 
             # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
             if not top_docs or top_docs[0]['similarity'] < 0.35:
-                external_api_url = "http://100.99.151.44:1500/api/answer"
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
@@ -49,7 +51,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
                 return
             # GPT-4o를 사용하여 명확한 질문 생성
@@ -124,7 +126,6 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
 
             # 질문 리스트가 비어있는 경우 답변 불가능으로 처리
             if not clarifying_questions:
-                external_api_url = "http://100.99.151.44:1500/api/answer"
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
@@ -132,7 +133,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         try:
                             result = await response.json()
                             print("Response:", result)
@@ -141,16 +142,15 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                             print("Raw response:", await response.text())
                 return
             # 외부 API에 응답 전송
-            external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
                 "clarifying_questions": clarifying_questions,
-                "status_code": 200
+                "status_code": 211
             }
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -166,7 +166,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             }
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -286,16 +286,15 @@ Begin your response now:
             raw_response = gpt_response.choices[0].message.content
             print(raw_response)
             # 외부 API에 응답 전송
-            external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
                 "sessionId": session_id,
                 "uid": uid,
                 "answer": raw_response,
-                "status_code": 200  # Successful processing
+                "status_code": 202  # Successful processing
             }
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -312,7 +311,7 @@ Begin your response now:
             }
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(external_api_url, json=external_api_data) as response:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
