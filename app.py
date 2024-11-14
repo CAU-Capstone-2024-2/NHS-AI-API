@@ -36,6 +36,23 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
 
     async def process_clarifying_questions(session_id: str, uid: str, question: str):
         try:
+            # 질문과 관련된 문서 검색
+            top_docs = db.search(query=question, k=1)
+            
+            # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
+            if not top_docs or top_docs[0]['similarity'] < 0.2:
+                external_api_url = "http://100.99.151.44:1500/api/answer"
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": "This is an unanswerable question.",
+                    "status_code": 423
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
+                return
+
             # GPT-4o를 사용하여 명확한 질문 생성
             messages = [
                 {
@@ -91,6 +108,20 @@ Please generate questions that are:
             response_json = json.loads(gpt_response.choices[0].message.content)
             clarifying_questions = response_json["clarifying_questions"]
             print(clarifying_questions)
+
+            # 질문 리스트가 비어있는 경우 답변 불가능으로 처리
+            if not clarifying_questions:
+                external_api_url = "http://100.99.151.44:1500/api/answer"
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": "This is an unanswerable question.",
+                    "status_code": 423
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(external_api_url, json=external_api_data) as response:
+                        print(await response.text())
+                return
             # 외부 API에 응답 전송
             external_api_url = "http://100.99.151.44:1500/api/answer"
             external_api_data = {
