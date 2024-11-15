@@ -233,7 +233,7 @@ Please follow these steps:
 2. Identify the key information in the document that relates to the question.
 3. Formulate a concise answer that directly addresses the question.
 4. Ensure your answer is simple and easy for an elderly person to understand.
-5. If the document doesn't contain information to fully answer the question, state this clearly and provide whatever relevant information you can from the document.
+5. If the document doesn't contain information to fully answer the question, state this clearly and provide whatever relevant information you can from the document in "plain_text" poster template format. In other cases, please use a "qna__square_single" poster template.
 
 When writing your response:
 - Use simple, clear language
@@ -250,7 +250,7 @@ Begin your response now:
 
             # GPT-4o를 사용하여 답변 생성
             gpt_response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=messages,
                 temperature=0,
                 max_tokens=8192,
@@ -268,24 +268,37 @@ Begin your response now:
                                 "template_type": {
                                     "type": "string",
                                     "description": "The type of the poster template used.",
-                                    "enum": ["qna__square_single"]
+                                    "enum": ["plain_text", "qna__square_single"]
                                 },
                                 "content": {
-                                    "anyOf": [{
-                                        "type": "object",
-                                        "properties": {
-                                            "question": {
-                                                "type": "string",
-                                                "description": "The first question for template 1."
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "question": {
+                                                    "type": "string",
+                                                    "description": "The first question for template 1."
+                                                },
+                                                "answer": {
+                                                    "type": "string",
+                                                    "description": "The answer to the first question."
+                                                }
                                             },
-                                            "answer": {
-                                                "type": "string",
-                                                "description": "The answer to the first question."
-                                            }
+                                            "required": ["question", "answer"],
+                                            "additionalProperties": False
                                         },
-                                        "required": ["question", "answer"],
-                                        "additionalProperties": False
-                                    }]
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "text": {
+                                                    "type": "string",
+                                                    "description": "Plain text content for the template."
+                                                }
+                                            },
+                                            "required": ["text"],
+                                            "additionalProperties": False
+                                        }
+                                    ]
                                 }
                             },
                             "required": ["template_type", "content"],
@@ -298,13 +311,28 @@ Begin your response now:
             # Get the raw JSON response
             raw_response = gpt_response.choices[0].message.content
             print(raw_response)
-            # 외부 API에 응답 전송
-            external_api_data = {
-                "sessionId": session_id,
-                "uid": uid,
-                "answer": raw_response,
-                "status_code": 202  # Successful processing
-            }
+            
+            # Parse the raw response
+            response_data = json.loads(raw_response)
+            
+            # Prepare external API data based on template type
+            if response_data["template_type"] == "plain_text":
+                print("Plain text template")
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": response_data["content"]["text"],
+                    "status_code": 201
+                }
+            else:
+                print("QnA template")
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": raw_response,
+                    "status_code": 202
+                }
+
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
