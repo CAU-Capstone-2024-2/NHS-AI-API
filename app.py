@@ -40,47 +40,60 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
     async def process_clarifying_questions(session_id: str, uid: str, question: str):
         try:
             # 질문과 관련된 문서 검색
-            top_docs = db.search(query=question, k=1)
+            top_docs = db.search(query=question, k=3)
 
             # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
             if not top_docs or top_docs[0]['similarity'] < 0.35:
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
-                    "answer": "현재 저는 건강에 대한 정보 제공을 중점적으로 하고 있어요. 혹시 도움이 필요하시면 건강 관련 질문을 해주세요!",
+                    "answer": "안녕하세요! 저는 현재 건강 정보를 중심으로 돕고 있어요. 건강과 관련된 질문을 구체적으로 해주시면 더 자세한 도움을 드릴 수 있어요!",
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
                     async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
                 return
+
+                        # 관련 문서 내용 추출
+            context = ""
+            for doc in top_docs:
+                if doc['metadata']['contextualized_content'] == "":
+                    context += f"{doc['metadata']['original_content']}\n\n"
+                else:
+                    context += f"문맥:{doc['metadata']['contextualized_content']}{doc['metadata']['original_content']}\n\n"
+                
             # GPT-4o를 사용하여 명확한 질문 생성
             messages = [
                 {
                     "role": "user",
-                    "content": f"""You are an AI assistant tasked with creating specific questions to help find health information for elderly users. Your goal is to take a user's general health-related question and create three more specific questions in Korean that will help in searching for relevant health information.
+                    "content": f"""You are an AI assistant for a chatbot service that provides health information to the elderly. Your task is to create clarifying questions based on a user's initial query and reference documents.
 
-                    Here is the user's question:
-                    <user_question>
-                    {question}
-                    </user_question>
+Here is the user's question:
+<user_question>
+{question}
+</user_question>
 
-                    Analyze the user's question to determine if it is related to health information for the elderly. If it is, follow these steps:
+Here are the reference documents provided for answering health-related questions:
+<reference_documents>
+{context}
+</reference_documents>
 
-                    1. Identify the main health topic or concern in the user's question.
-                    2. Consider what additional information would be helpful to provide a comprehensive answer.
-                    3. Think about how to break down the question into more specific aspects of the health issue.
+Your task is to create three specific questions in Korean that can help find relevant health information by clarifying the user's question. These questions should be aimed at finding appropriate documents to answer the user's query, not at gathering more information from the user.
 
-                    Based on your analysis, create three questions that:
-                    - Are more specific than the original question
-                    - Focus on different aspects of the health topic
-                    - Are formulated as document-searching questions (not questions you would ask the elderly person directly)
-                    - Do not include numbering at the beginning of each question
+Guidelines for creating questions:
+1. Questions should be in Korean.
+2. Questions should be specific and relevant to the user's initial query.
+3. Questions should focus on finding information within the reference documents.
+4. Do not make questions directed at the elderly; instead, frame them as if you're searching for information.
+5. Avoid yes/no questions; use open-ended questions that can lead to more detailed information.
 
-                    If the user's question is not related to health information for the elderly, do not create any questions.
+If the user's question is not related to health information, do not create any questions. In this case, provide an empty list.
 
-                    Provide your response in the following format:
-                    [Insert the three questions here, each on a new line. If the original question is not health-related, leave this section empty.]
+Present your output in the following format:
+[List your three questions in Korean here, one per line. If the query is not health-related, leave this section empty.]
+
+Remember, do not number the questions, and ensure they are written in Korean.
 """
                 }
             ]
@@ -129,7 +142,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
-                    "answer": "현재 저는 건강에 대한 정보 제공을 중점적으로 하고 있어요. 혹시 도움이 필요하시면 건강 관련 질문을 해주세요!",
+                    "answer": "안녕하세요! 저는 현재 건강 정보를 중심으로 돕고 있어요. 건강과 관련된 질문을 구체적으로 해주시면 더 자세한 도움을 드릴 수 있어요!",
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
