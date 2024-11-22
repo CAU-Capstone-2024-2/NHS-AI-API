@@ -212,7 +212,7 @@ class ContextualVectorDB:
 
         texts_to_embed = []
         metadata = []
-
+        custom_info = custom_info["custom_information"]
         for disease_data in custom_info:
             for disease_name, sentences in disease_data.items():
                 for item in sentences:
