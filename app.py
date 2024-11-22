@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from openai import OpenAI
 from contextual_vector_db import ContextualVectorDB
 from dotenv import load_dotenv
@@ -28,6 +28,9 @@ class QuestionRequest(BaseModel):
     sessionId: str
     uid: str
     question: str
+
+class CustomInformationRequest(BaseModel):
+    info: str = Field(..., description="Information string containing disease tags")
 
 # Define the external API URL as a constant
 EXTERNAL_API_URL = "http://100.99.151.44:1500/api/answer"
@@ -188,6 +191,13 @@ Remember, do not number the questions, and ensure they are written in Korean.
     # Add the background task and return response
     background_tasks.add_task(process_clarifying_questions, request.sessionId, request.uid, request.question)
     return {"message": "응답이 성공적으로 처리되었습니다."}
+
+@app.post('/custom_information')
+async def get_custom_information(request: CustomInformationRequest):
+    img_url = db.get_custom_information(request.info)
+    if not img_url:
+        raise HTTPException(status_code=404, detail="No relevant information found")
+    return {"img_url": img_url}
 
 @app.post('/ask')
 async def ask_question(request: QuestionRequest, background_tasks: BackgroundTasks):

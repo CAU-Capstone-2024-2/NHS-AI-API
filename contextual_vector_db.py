@@ -27,8 +27,12 @@ class ContextualVectorDB:
         self.query_cache = {}
         self.db_path = f"./data/{name}/contextual_vector_db.pkl"
         self.checkpoint_path = f"./data/{name}/checkpoint.pkl"
+        self.custom_info_db_path = f"./data/{name}/custom_info_db.pkl"
         
         self.token_lock = threading.Lock()
+        self.custom_info_embeddings = []
+        self.custom_info_metadata = []
+        self.load_custom_information()
 
     def situate_context(self, doc: str, chunk: str) -> tuple[str, Any]:
         prompt = f"""
@@ -190,6 +194,107 @@ class ContextualVectorDB:
         self.embeddings = data["embeddings"]
         self.metadata = data["metadata"]
         self.query_cache = json.loads(data["query_cache"])
+
+    def load_custom_information(self):
+        if os.path.exists(self.custom_info_db_path):
+            with open(self.custom_info_db_path, "rb") as file:
+                data = pickle.load(file)
+                self.custom_info_embeddings = data["embeddings"]
+                self.custom_info_metadata = data["metadata"]
+            return
+
+        try:
+            with open('./data/custom_information.json', 'r', encoding='utf-8') as file:
+                custom_info = json.load(file)
+        except FileNotFoundError:
+            print("Custom information file not found")
+            return
+
+        texts_to_embed = []
+        metadata = []
+
+        for disease_data in custom_info:
+            for disease_name, sentences in disease_data.items():
+                for item in sentences:
+                    texts_to_embed.append(item["sentence"])
+                    metadata.append({
+                        "disease": disease_name,
+                        "index": item["index"],
+                        "sentence": item["sentence"],
+                        "original": item["original"],
+                        "img": item["img"],
+                        "img_big": item["img_big"]
+                    })
+
+        if texts_to_embed:
+            embeddings = self.voyage_client.embed(texts_to_embed, model="voyage-3").embeddings
+            
+            data = {
+                "embeddings": embeddings,
+                "metadata": metadata
+            }
+            
+            os.makedirs(os.path.dirname(self.custom_info_db_path), exist_ok=True)
+            with open(self.custom_info_db_path, "wb") as file:
+                pickle.dump(data, file)
+            
+            self.custom_info_embeddings = embeddings
+            self.custom_info_metadata = metadata
+
+    def get_custom_information(self, info: str) -> str:
+        import re
+        import numpy as np
+        
+        # Extract disease names
+        disease_match = re.search(r'<disease>(.*?)</disease>', info)
+        if not disease_match:
+            return ""
+            
+        diseases = [d.strip() for d in disease_match.group(1).split(',')]
+        
+        # Map Korean disease names to English
+        disease_map = {
+            "고혈압": "hypertension",
+            "이상지질혈증": "dyslipidemia",
+            "당뇨병": "diabetes"
+        }
+        
+        # Convert to English names
+        target_diseases = [disease_map.get(d) for d in diseases if disease_map.get(d)]
+        
+        if not target_diseases:
+            return ""
+            
+        # Get relevant metadata indices
+        relevant_indices = [
+            i for i, meta in enumerate(self.custom_info_metadata)
+            if meta["disease"] in target_diseases
+        ]
+        
+        if not relevant_indices:
+            return ""
+            
+        # Calculate initial probabilities (equal weights)
+        probabilities = np.ones(len(relevant_indices)) / len(relevant_indices)
+        
+        # Get info embedding
+        info_embedding = self.voyage_client.embed([info], model="voyage-3").embeddings[0]
+        
+        # Calculate similarities and update probabilities
+        similarities = []
+        for idx in relevant_indices:
+            similarity = np.dot(self.custom_info_embeddings[idx], info_embedding)
+            similarities.append(similarity)
+        
+        # Normalize similarities to probabilities
+        similarities = np.array(similarities)
+        similarities = np.exp(similarities) / np.sum(np.exp(similarities))
+        
+        # Sample based on probabilities
+        selected_idx = np.random.choice(relevant_indices, p=similarities)
+        
+        # Return the img_big URL
+        return self.custom_info_metadata[selected_idx]["img_big"]
 
     def _save_checkpoint(self, texts_to_embed, metadata, processed_chunks):
         checkpoint_data = {
