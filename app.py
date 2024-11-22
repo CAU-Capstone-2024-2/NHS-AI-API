@@ -31,6 +31,7 @@ class QuestionRequest(BaseModel):
 
 class CustomInformationRequest(BaseModel):
     info: str = Field(..., description="Information string containing disease tags")
+    index: list[str] = Field(default=[], description="List of indices to penalize")
 
 # Define the external API URL as a constant
 EXTERNAL_API_URL = "http://100.99.151.44:1500/api/answer"
@@ -194,10 +195,10 @@ Remember, do not number the questions, and ensure they are written in Korean.
 
 @app.post('/custom_information')
 async def get_custom_information(request: CustomInformationRequest):
-    img_url = db.get_custom_information(request.info)
-    if not img_url:
+    result = db.get_custom_information(request.info, request.index)
+    if not result:
         raise HTTPException(status_code=404, detail="No relevant information found")
-    return {"img_url": img_url}
+    return result
 
 @app.post('/ask')
 async def ask_question(request: QuestionRequest, background_tasks: BackgroundTasks):

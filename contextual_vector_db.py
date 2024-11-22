@@ -241,14 +241,17 @@ class ContextualVectorDB:
             self.custom_info_embeddings = embeddings
             self.custom_info_metadata = metadata
 
-    def get_custom_information(self, info: str) -> str:
+    def get_custom_information(self, info: str, penalize_indices: list[str] = None) -> dict:
         import re
         import numpy as np
         
+        if penalize_indices is None:
+            penalize_indices = []
+            
         # Extract disease names
         disease_match = re.search(r'<disease>(.*?)</disease>', info)
         if not disease_match:
-            return ""
+            return {}
             
         diseases = [d.strip() for d in disease_match.group(1).split(',')]
         
@@ -263,7 +266,7 @@ class ContextualVectorDB:
         target_diseases = [disease_map.get(d) for d in diseases if disease_map.get(d)]
         
         if not target_diseases:
-            return ""
+            return {}
             
         # Get relevant metadata indices
         relevant_indices = [
@@ -272,7 +275,7 @@ class ContextualVectorDB:
         ]
         
         if not relevant_indices:
-            return ""
+            return {}
             
         # Calculate initial probabilities (equal weights)
         probabilities = np.ones(len(relevant_indices)) / len(relevant_indices)
@@ -284,6 +287,9 @@ class ContextualVectorDB:
         similarities = []
         for idx in relevant_indices:
             similarity = np.dot(self.custom_info_embeddings[idx], info_embedding)
+            # Apply penalty if index is in penalize_indices
+            if str(self.custom_info_metadata[idx]["index"]) in penalize_indices:
+                similarity *= 0.1  # Strong penalty factor
             similarities.append(similarity)
         
         # Normalize similarities to probabilities
@@ -293,8 +299,11 @@ class ContextualVectorDB:
         # Sample based on probabilities
         selected_idx = np.random.choice(relevant_indices, p=similarities)
         
-        # Return the img_big URL
-        return self.custom_info_metadata[selected_idx]["img_big"]
+        # Return both img_big URL and index
+        return {
+            "img_url": self.custom_info_metadata[selected_idx]["img_big"],
+            "index": str(self.custom_info_metadata[selected_idx]["index"])
+        }
 
     def _save_checkpoint(self, texts_to_embed, metadata, processed_chunks):
         checkpoint_data = {
