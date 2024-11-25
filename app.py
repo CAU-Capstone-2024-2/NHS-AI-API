@@ -34,7 +34,7 @@ class CustomInformationRequest(BaseModel):
     index: list[str] = Field(default=[], description="List of indices to penalize")
 
 # Define the external API URL as a constant
-EXTERNAL_API_URL = "http://100.99.151.44:1500/api/answer"
+EXTERNAL_API_URL = "http://100.119.71.36:1500/api/answer"
 
 @app.post('/qsmaker')
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
@@ -47,7 +47,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             top_docs = db.search(query=question, k=3)
 
             # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
-            if not top_docs or top_docs[0]['similarity'] < 0.35:
+            if not top_docs or top_docs[0]['similarity'] < 0.30:
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
@@ -256,7 +256,7 @@ When writing your response:
 - Keep sentences short and to the point
 - Be respectful and patient in your tone
 
-Please provide your answer in Korean, formatted as plain text without any special formatting or tags. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
+Please provide your answer in Korean, formatted as plain text without any special formatting, markdown or tags. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
 
 Begin your response now:
                     """
