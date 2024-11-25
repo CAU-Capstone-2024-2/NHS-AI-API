@@ -85,7 +85,7 @@ Here are the reference documents provided for answering health-related questions
 
 Your task is to create three specific, concise topics in Korean that can help find relevant health information by clarifying the user's question. These questions should be aimed at finding appropriate documents to answer the user's query, not at gathering more information from the user.
 
-Guidelines for creating questions:
+Guidelines for creating topics:
 1. Topics should be in Korean.
 2. Topics should be specific and relevant to the user's initial query.
 3. Topics should focus on finding information within the reference documents.
@@ -100,9 +100,8 @@ Present your output in the following format:
 [List your three topics in Korean here, one per line. If the query is not health-related, leave this section empty.]
 
 Remember, do not number the topics, and ensure they are written in Korean.
-
-Output Example)
-[🩺 당뇨병 초기 증상, 💊 당뇨병 진단을 위한 검사 항목, 🏥 당뇨병 관리를 위한 생활수칙]
+Use emojis that fit well with the topic, in addition to the ones used in the example.
+Please concisely write only the topic, not in question form.
 """
                 }
             ]
