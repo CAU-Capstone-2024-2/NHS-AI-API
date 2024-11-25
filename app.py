@@ -71,7 +71,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             messages = [
                 {
                     "role": "user",
-                    "content": f"""You are an AI assistant for a chatbot service that provides health information to the elderly. Your task is to create clarifying questions based on a user's initial query and reference documents.
+                    "content": f"""You are an AI assistant for a chatbot service that provides health information to the elderly. Your task is to create clarifying topics based on a user's initial query and reference documents.
 
 Here is the user's question:
 <user_question>
@@ -83,22 +83,26 @@ Here are the reference documents provided for answering health-related questions
 {context}
 </reference_documents>
 
-Your task is to create three specific, concise questions in Korean that can help find relevant health information by clarifying the user's question. These questions should be aimed at finding appropriate documents to answer the user's query, not at gathering more information from the user.
+Your task is to create three specific, concise topics in Korean that can help find relevant health information by clarifying the user's question. These questions should be aimed at finding appropriate documents to answer the user's query, not at gathering more information from the user.
 
 Guidelines for creating questions:
-1. Questions should be in Korean.
-2. Questions should be specific and relevant to the user's initial query.
-3. Questions should focus on finding information within the reference documents.
-4. Do not make questions directed at the elderly; instead, frame them as if you're searching for information.
-5. Avoid yes/no questions; use open-ended questions that can lead to more detailed information.
-6. Do not create questions that directly ask if there is a document
+1. Topics should be in Korean.
+2. Topics should be specific and relevant to the user's initial query.
+3. Topics should focus on finding information within the reference documents.
+4. Please modify the question to generate it with the following specific topic with emojis.: "🩺 당뇨병 증상과 진단 기준"
+5. Do not make topics directed at the elderly; instead, frame them as if you're searching for information.
+6. Avoid yes/no topics; use open-ended topics that can lead to more detailed information.
+7. Do not create topics that directly ask if there is a document
 
 If the user's question is not related to health information, do not create any questions. In this case, provide an empty list.
 
 Present your output in the following format:
-[List your three questions in Korean here, one per line. If the query is not health-related, leave this section empty.]
+[List your three topics in Korean here, one per line. If the query is not health-related, leave this section empty.]
 
-Remember, do not number the questions, and ensure they are written in Korean.
+Remember, do not number the topics, and ensure they are written in Korean.
+
+Output Example)
+[🩺 당뇨병 초기 증상, 💊 당뇨병 진단을 위한 검사 항목, 🏥 당뇨병 관리를 위한 생활수칙]
 """
                 }
             ]
