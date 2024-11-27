@@ -6,3 +6,5 @@ data/
 __pycache__/
 nohup.out
 .DS_Store
+classify_dataset.jsonl
+test2.py
