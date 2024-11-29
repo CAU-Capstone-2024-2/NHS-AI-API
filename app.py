@@ -28,6 +28,7 @@ class QuestionRequest(BaseModel):
     sessionId: str
     uid: str
     question: str
+    is_acute: bool = False
 
 class CustomInformationRequest(BaseModel):
     info: str = Field(..., description="Information string containing disease tags")
@@ -374,7 +375,10 @@ Begin your response now:
 
     # 비동기 작업 시작
     # Add the background task and return response
-    background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
+    if request.is_acute:
+        pass
+    else:
+        background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
     return {"message": "응답이 성공적으로 처리되었습니다."}
 
 if __name__ == '__main__':
