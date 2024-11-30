@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import json
 import aiohttp
 from typing import Optional
-
+import os
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
@@ -42,6 +42,7 @@ class CustomInformationRequest(BaseModel):
 
 # Define the external API URL as a constant
 EXTERNAL_API_URL = "http://100.119.71.36:1500/api/answer"
+DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '노로바이러스', '심금연' '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토뇨증', '고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열']
 
 @app.post('/qsmaker')
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
@@ -50,6 +51,12 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
 
     async def check_acute(question: str) -> bool:
         try:
+            prompt_question = f"다음 건강 정보 관련 질문이 [급성고환염, 당뇨병 합병증(급성 합병증), 당뇨병 합병증(급성 합병증_저혈당), 급성부고환염, 급성 간부전, 급성 바이러스 위장관염, 급성신손상(소아), 급성 세균성 장염, 심낭염(급성 심낭염), 당뇨병 합병증(급성 합병증_당뇨병케토산증, 고혈당고삼투질상태), 급성 심근경색증, 급성 충수염, 급성호흡기바이러스감염증, 급성호흡곤란증후군, 심부전, 부정맥, 심장 판막 질환, 대동맥 박리, 심실중격결손증, 동맥관 개존증, 심방중격결손증, 폐색전증, 감염성 심내막염, 심낭염, 고혈압성 심장질환, 협심증, 폐렴, 만성폐쇄성폐질환, 기흉, 부신부전증, 갑상선 기능 항진증, 갑상선 기능 저하증, 갈색세포종, 뇌졸중, 뇌전증, 뇌수막염, 뇌하수체 기능 저하증, 패혈증, 중증열성혈소판감소증후군, 말라리아, 레지오넬라증, 일본뇌염, 광견병, 파상풍, 디프테리아, 백일해, 비브리오 패혈증, 아나필락시스, 독극물 섭취, 영아돌연사증후군, 췌장염, 장결핵, 샤가스병, 바이러스성 출혈열] 카테고리 안에 속한다며 True 속하지 않는다면 False을 출력하세요. 다른 내용 없이 True 또는 False만을 출력하세요.: {question}"
+
+            for term in DESIRED_TERMS:
+                if term in question:
+                    return True
+                
             acute_completion = acute_client.with_options(timeout=2).chat.completions.create(
                 model="mldljyh/nhs_1.5b_1_r16_merged_t2",
                 messages=[
@@ -59,19 +66,20 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     },
                     {
                         "role": "user",
-                        "content": question
+                        "content": prompt_question
                     }
                 ],
                 temperature=0,
                 top_p=0.1
             )
             response = acute_completion.choices[0].message.content.strip()
-            return response.lower() == "true"
+            return  "true" in response.lower()
+        
         except Exception as e:
             print(f"Acute API error: {str(e)}, falling back to gpt-4o-mini")
             try:
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4o",
                     messages=[
                         {
                             "role": "system",
@@ -79,14 +87,14 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                         },
                         {
                             "role": "user",
-                            "content": question
+                            "content": prompt_question
                         }
                     ],
                     temperature=0,
                     top_p=0.1
                 )
                 response = completion.choices[0].message.content.strip()
-                return response.lower() == "true"
+                return "true" in response.lower()
             except Exception as e:
                 print(f"GPT-4o-mini error: {str(e)}")
                 return False
@@ -453,22 +461,8 @@ Begin your response now:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
 
     # 비동기 작업 시작
-    # Add the background task and return response
-    if request.isAcute:
-        external_api_data = {
-            "sessionId": session_id,
-            "uid": uid,
-            "answer": "https://arc.net/l/quote/tvwiqphp",
-            "status_code": 203  # Internal server error
-        }
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
-                    print(await response.text())
-        except Exception as e:
-            print(f"외부 API 호출 중 오류 발생: {str(e)}")
-    else:
-        background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
+    # # Add the background task and return response
+    background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
     return {"message": "응답이 성공적으로 처리되었습니다."}
 
 if __name__ == '__main__':
