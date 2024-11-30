@@ -34,7 +34,7 @@ class QuestionRequest(BaseModel):
     sessionId: str
     uid: str
     question: str
-    info: str
+    info: str = ""
     isAcute: bool = False
 
 class CustomInformationRequest(BaseModel):
@@ -74,6 +74,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                 top_p=0.1
             )
             response = acute_completion.choices[0].message.content.strip()
+            print(response)
             return  "true" in response.lower()
         
         except Exception as e:
@@ -103,6 +104,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
     async def process_clarifying_questions(session_id: str, uid: str, question: str):
         # Check if it's an acute question
         is_acute = await check_acute(question)
+        print(is_acute)
         if is_acute:
             acute_results = db.search_acute(question)
             if acute_results:
@@ -113,6 +115,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     "clarifying_questions": clarifying_questions,
                     "status_code": 211
                 }
+                print(clarifying_questions)
                 async with aiohttp.ClientSession() as session:
                     async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
@@ -292,6 +295,7 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
                 "answer": acute_results["metadata"]["link"],
                 "status_code": 203
             }
+            print(external_api_data)
             async with aiohttp.ClientSession() as session:
                 async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                     print(await response.text())
