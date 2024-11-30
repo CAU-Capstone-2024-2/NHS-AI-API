@@ -284,12 +284,12 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
         raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
 
     if request.isAcute:
-        acute_results = db.search_acute(request.question, k=1)
+        acute_results = db.search_acute_exact(request.question)
         if acute_results:
             external_api_data = {
                 "sessionId": request.sessionId,
                 "uid": request.uid,
-                "answer": acute_results[0]["metadata"]["link"],
+                "answer": acute_results["metadata"]["link"],
                 "status_code": 203
             }
             async with aiohttp.ClientSession() as session:
