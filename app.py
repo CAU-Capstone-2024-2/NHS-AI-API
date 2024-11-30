@@ -12,6 +12,10 @@ load_dotenv()
 
 # OpenAI 클라이언트 초기화
 client = OpenAI()
+acute_client = OpenAI(
+    base_url=os.getenv("ACUTE_ADRES"),
+    api_key=os.getenv("ACUTE_API_KEY")
+)
 
 with open('data/doc.json', 'r') as f:
     transformed_dataset = json.load(f)
@@ -20,6 +24,7 @@ with open('data/doc.json', 'r') as f:
 db = ContextualVectorDB(name="test_db")
 # 데이터 로드 (필요에 따라 load_data 메소드 사용)
 db.load_data(transformed_dataset, parallel_threads=4)
+db.load_acute_data()
 
 # FastAPI 애플리케이션 초기화
 app = FastAPI()
@@ -43,7 +48,66 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
     if not request.question or not request.sessionId or not request.uid:
         raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
 
+    async def check_acute(question: str) -> bool:
+        try:
+            acute_completion = acute_client.with_options(timeout=2).chat.completions.create(
+                model="mldljyh/nhs_1.5b_1_r16_merged_t2",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ""
+                    },
+                    {
+                        "role": "user",
+                        "content": question
+                    }
+                ],
+                temperature=0,
+                top_p=0.1
+            )
+            response = acute_completion.choices[0].message.content.strip()
+            return response.lower() == "true"
+        except Exception as e:
+            print(f"Acute API error: {str(e)}, falling back to gpt-4o-mini")
+            try:
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": ""
+                        },
+                        {
+                            "role": "user",
+                            "content": question
+                        }
+                    ],
+                    temperature=0,
+                    top_p=0.1
+                )
+                response = completion.choices[0].message.content.strip()
+                return response.lower() == "true"
+            except Exception as e:
+                print(f"GPT-4o-mini error: {str(e)}")
+                return False
+
     async def process_clarifying_questions(session_id: str, uid: str, question: str):
+        # Check if it's an acute question
+        is_acute = await check_acute(question)
+        if is_acute:
+            acute_results = db.search_acute(question)
+            if acute_results:
+                clarifying_questions = [result["metadata"]["question"] for result in acute_results]
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "clarifying_questions": clarifying_questions,
+                    "status_code": 211
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                        print(await response.text())
+                return
         try:
             # 질문과 관련된 문서 검색
             top_docs = db.search(query=question, k=3)
@@ -209,6 +273,20 @@ async def get_custom_information(request: CustomInformationRequest):
 async def ask_question(request: QuestionRequest, background_tasks: BackgroundTasks):
     if not request.question or not request.sessionId or not request.uid:
         raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
+
+    if request.isAcute:
+        acute_results = db.search_acute(request.question, k=1)
+        if acute_results:
+            external_api_data = {
+                "sessionId": request.sessionId,
+                "uid": request.uid,
+                "answer": acute_results[0]["metadata"]["link"],
+                "status_code": 203
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                    print(await response.text())
+            return {"message": "응답이 성공적으로 처리되었습니다."}
 
     async def process_question(session_id: str, uid: str, question: str):
         try:

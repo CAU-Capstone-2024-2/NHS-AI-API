@@ -28,6 +28,7 @@ class ContextualVectorDB:
         self.db_path = f"./data/{name}/contextual_vector_db.pkl"
         self.checkpoint_path = f"./data/{name}/checkpoint.pkl"
         self.custom_info_db_path = f"./data/{name}/custom_info_db.pkl"
+        self.acute_db_path = f"./data/{name}/acute_ql_db.pkl"
         
         self.token_lock = threading.Lock()
         self.custom_info_embeddings = []
@@ -194,6 +195,58 @@ class ContextualVectorDB:
         self.embeddings = data["embeddings"]
         self.metadata = data["metadata"]
         self.query_cache = json.loads(data["query_cache"])
+
+    def load_acute_data(self):
+        if os.path.exists(self.acute_db_path):
+            with open(self.acute_db_path, "rb") as file:
+                data = pickle.load(file)
+                self.acute_embeddings = data["embeddings"]
+                self.acute_metadata = data["metadata"]
+            return
+
+        try:
+            acute_questions = []
+            acute_metadata = []
+            with open('./data/acute_ql_dataset.jsonl', 'r', encoding='utf-8') as file:
+                for line in file:
+                    data = json.loads(line)
+                    acute_questions.append(data["question"])
+                    acute_metadata.append(data)
+
+            if acute_questions:
+                embeddings = self.voyage_client.embed(acute_questions, model="voyage-3").embeddings
+                
+                data = {
+                    "embeddings": embeddings,
+                    "metadata": acute_metadata
+                }
+                
+                os.makedirs(os.path.dirname(self.acute_db_path), exist_ok=True)
+                with open(self.acute_db_path, "wb") as file:
+                    pickle.dump(data, file)
+                
+                self.acute_embeddings = embeddings
+                self.acute_metadata = acute_metadata
+        except FileNotFoundError:
+            print("Acute dataset file not found")
+            return
+
+    def search_acute(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+        if not hasattr(self, 'acute_embeddings') or not self.acute_embeddings:
+            return []
+
+        query_embedding = self.voyage_client.embed([query], model="voyage-3").embeddings[0]
+        similarities = np.dot(self.acute_embeddings, query_embedding)
+        top_indices = np.argsort(similarities)[::-1][:k]
+        
+        top_results = []
+        for idx in top_indices:
+            result = {
+                "metadata": self.acute_metadata[idx],
+                "similarity": float(similarities[idx]),
+            }
+            top_results.append(result)
+        return top_results
 
     def load_custom_information(self):
         if os.path.exists(self.custom_info_db_path):
