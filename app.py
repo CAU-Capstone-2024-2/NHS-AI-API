@@ -113,7 +113,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     "sessionId": session_id,
                     "uid": uid,
                     "clarifying_questions": clarifying_questions,
-                    "status_code": 211
+                    "status_code": 212
                 }
                 print(clarifying_questions)
                 async with aiohttp.ClientSession() as session:
