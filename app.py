@@ -361,6 +361,8 @@ Please follow these steps:
 3. Formulate a concise answer that directly addresses the question.
 4. Ensure your answer is simple and easy for an elderly person to understand.
 5. If the document doesn't contain information to fully answer the question, state this clearly and provide whatever relevant information you can from the document in "plain_text" poster template format. In other cases, please use a "qna__square_single" poster template.
+6. IMPORTANT: If the question is CLOSELY RELATED to any of the following topics, just state through "plain_text" that the content cannot be found in the document. "문서에는 해당 질문과 관련된 내용이 보이지 않습니다. 다른 질문을 해주시면 성심껏 답변드리겠습니다." is all you need to say.: ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '노로바이러스', '심금연' '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토뇨증', '고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열']
+
 
 When writing your response:
 - Use simple, clear language
