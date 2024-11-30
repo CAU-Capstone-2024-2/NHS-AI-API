@@ -248,6 +248,26 @@ class ContextualVectorDB:
             top_results.append(result)
         return top_results
 
+    def search_acute_exact(self, query: str) -> Optional[Dict[str, Any]]:
+        """Search for exact match in acute questions"""
+        if not hasattr(self, 'acute_metadata'):
+            return None
+            
+        # Normalize query for comparison
+        query = query.strip().lower()
+        
+        # Look for exact match
+        for meta in self.acute_metadata:
+            if meta["question"].strip().lower() == query:
+                return {
+                    "metadata": meta,
+                    "similarity": 1.0
+                }
+        
+        # If no exact match, fall back to similarity search
+        results = self.search_acute(query, k=1)
+        return results[0] if results else None
+
     def load_custom_information(self):
         if os.path.exists(self.custom_info_db_path):
             with open(self.custom_info_db_path, "rb") as file:
