@@ -3,7 +3,7 @@ import pickle
 import json
 import numpy as np
 import voyageai
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from tqdm import tqdm
 from openai import OpenAI
 import threading
