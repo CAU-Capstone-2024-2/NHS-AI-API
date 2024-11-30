@@ -214,7 +214,14 @@ class ContextualVectorDB:
                     acute_metadata.append(data)
 
             if acute_questions:
-                embeddings = self.voyage_client.embed(acute_questions, model="voyage-3").embeddings
+                # Process in batches of 128
+                batch_size = 128
+                embeddings = []
+                
+                for i in range(0, len(acute_questions), batch_size):
+                    batch = acute_questions[i:i + batch_size]
+                    batch_embeddings = self.voyage_client.embed(batch, model="voyage-3").embeddings
+                    embeddings.extend(batch_embeddings)
                 
                 data = {
                     "embeddings": embeddings,
