@@ -28,7 +28,8 @@ class QuestionRequest(BaseModel):
     sessionId: str
     uid: str
     question: str
-    is_acute: bool = False
+    info: str
+    isAcute: bool = False
 
 class CustomInformationRequest(BaseModel):
     info: str = Field(..., description="Information string containing disease tags")
@@ -375,8 +376,19 @@ Begin your response now:
 
     # 비동기 작업 시작
     # Add the background task and return response
-    if request.is_acute:
-        pass
+    if request.isAcute:
+        external_api_data = {
+            "sessionId": session_id,
+            "uid": uid,
+            "answer": "https://arc.net/l/quote/tvwiqphp",
+            "status_code": 203  # Internal server error
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                    print(await response.text())
+        except Exception as e:
+            print(f"외부 API 호출 중 오류 발생: {str(e)}")
     else:
         background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
     return {"message": "응답이 성공적으로 처리되었습니다."}
