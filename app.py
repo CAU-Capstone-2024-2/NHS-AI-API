@@ -286,20 +286,39 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
     if not request.question or not request.sessionId or not request.uid:
         raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
 
-    if request.isAcute:
-        acute_results = db.search_acute_exact(request.question)
-        if acute_results:
+    async def process_acute_question(session_id: str, uid: str, question: str):
+        try:
+            acute_results = db.search_acute_exact(question)
+            if acute_results:
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": acute_results["metadata"]["link"],
+                    "status_code": 203
+                }
+                print(external_api_data)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                        print(await response.text())
+        except Exception as e:
+            error_message = f"급성 질문 처리 중 오류 발생: {str(e)}"
+            print(error_message)
             external_api_data = {
-                "sessionId": request.sessionId,
-                "uid": request.uid,
-                "answer": acute_results["metadata"]["link"],
-                "status_code": 203
+                "sessionId": session_id,
+                "uid": uid,
+                "answer": error_message,
+                "status_code": 500
             }
-            print(external_api_data)
-            async with aiohttp.ClientSession() as session:
-                async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
-                    print(await response.text())
-            return {"message": "응답이 성공적으로 처리되었습니다."}
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                        print(await response.text())
+            except Exception as e:
+                print(f"외부 API 호출 중 오류 발생: {str(e)}")
+
+    if request.isAcute:
+        background_tasks.add_task(process_acute_question, request.sessionId, request.uid, request.question)
+        return {"message": "응답이 성공적으로 처리되었습니다."}
 
     async def process_question(session_id: str, uid: str, question: str):
         try:
