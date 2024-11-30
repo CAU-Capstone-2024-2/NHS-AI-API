@@ -25,7 +25,7 @@ class ContextualVectorDB:
         self.embeddings = []
         self.metadata = []
         self.query_cache = {}
-        self.db_path = f"./data/{name}/contextual_vector_db.pkl"
+        self.db_path = f"./data/{name}/contextual_vector_db_filtered.pkl"
         self.checkpoint_path = f"./data/{name}/checkpoint.pkl"
         self.custom_info_db_path = f"./data/{name}/custom_info_db.pkl"
         self.acute_db_path = f"./data/{name}/acute_ql_db.pkl"
