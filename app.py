@@ -8,6 +8,7 @@ import json
 import aiohttp
 from typing import Optional
 import os
+import asyncio
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
@@ -75,7 +76,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             )
             response = acute_completion.choices[0].message.content.strip()
             print(response)
-            return  "true" in response.lower()
+            return "true" in response.lower()
         
         except Exception as e:
             print(f"Acute API error: {str(e)}, falling back to gpt-4o-mini")
@@ -137,7 +138,7 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                         print(await response.text())
                 return
 
-                        # 관련 문서 내용 추출
+            # 관련 문서 내용 추출
             context = ""
             for doc in top_docs:
                 if doc['metadata']['contextualized_content'] == "":
@@ -240,6 +241,30 @@ Please concisely write only the topic, not in question form.
                             print("JSON Parsing Error:", e)
                             print("Raw response:", await response.text())
                 return
+
+            # If clarifying_questions is not empty, check acute in parallel
+            if clarifying_questions:
+                acute_results = await asyncio.gather(
+                    *[check_acute(q) for q in clarifying_questions[:3]]
+                )
+                print(acute_results)
+                # If two or more questions are acute, proceed as if is_acute is True
+                if sum(acute_results) >= 2:
+                    acute_search_results = db.search_acute(clarifying_questions[0])
+                    if acute_search_results:
+                        clarifying_questions = [result["metadata"]["question"] for result in acute_search_results]
+                        external_api_data = {
+                            "sessionId": session_id,
+                            "uid": uid,
+                            "clarifying_questions": clarifying_questions,
+                            "status_code": 212
+                        }
+                        print(external_api_data)
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                                print(await response.text())
+                        return
+
             # 외부 API에 응답 전송
             external_api_data = {
                 "sessionId": session_id,
