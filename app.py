@@ -377,7 +377,7 @@ Begin your response now:
 
             # GPT-4o를 사용하여 답변 생성
             gpt_response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=messages,
                 temperature=0,
                 max_tokens=8192,
