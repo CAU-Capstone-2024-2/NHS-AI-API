@@ -1,9 +1,9 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 setup(
     name="medical-qa",
     version="0.1",
-    packages=find_packages(),
+    packages=find_namespace_packages(include=['src*']),
     install_requires=[
         "fastapi>=0.68.0",
         "pydantic>=1.8.0",
