@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from openai import OpenAI
-from contextual_vector_db import ContextualVectorDB
+from .vector_db import ContextualVectorDB
 from dotenv import load_dotenv
 import json
 import aiohttp
