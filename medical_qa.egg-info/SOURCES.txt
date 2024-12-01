@@ -1,0 +1,17 @@
+.gitignore
+LICENSE
+requirements.txt
+setup.py
+medical_qa.egg-info/PKG-INFO
+medical_qa.egg-info/SOURCES.txt
+medical_qa.egg-info/dependency_links.txt
+medical_qa.egg-info/requires.txt
+medical_qa.egg-info/top_level.txt
+src/__init__.py
+src/preprocessing/__init__.py
+src/preprocessing/data_processor.py
+src/preprocessing/ql_maker.py
+src/preprocessing/vector_db_filter.py
+src/server/__init__.py
+src/server/app.py
+src/server/vector_db.py
