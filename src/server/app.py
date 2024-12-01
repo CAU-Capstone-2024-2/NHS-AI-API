@@ -345,7 +345,7 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
         background_tasks.add_task(process_acute_question, request.sessionId, request.uid, request.question)
         return {"message": "응답이 성공적으로 처리되었습니다."}
 
-    async def process_question(session_id: str, uid: str, question: str):
+    async def process_question(session_id: str, uid: str, question: str, info: str):
         try:
             # 질문과 관련된 상위 5개 문서 검색
             top_docs = db.search(query=question, k=5)
@@ -379,6 +379,11 @@ An elderly person has asked the following question:
 {question}
 </question>
 
+Information and interests of the elderly person who asked the question.:
+<user_information>
+{info}
+</user_information>
+
 Please follow these steps:
 
 1. Carefully read and analyze the document.
@@ -393,8 +398,10 @@ When writing your response:
 - Avoid complex terms or jargon
 - Keep sentences short and to the point
 - Be respectful and patient in your tone
+- Be concise and to the point
+- Use Markdown to **bold** important parts of your answer
 
-Please provide your answer in Korean, formatted as plain text without any special formatting, markdown or tags. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
+Please provide your answer in Korean, formatted as plain text without any special formattings. Your response should be concise, typically no more than 3-4 sentences, unless more detail is absolutely necessary to answer the question fully.
 
 Begin your response now:
                     """
@@ -512,7 +519,7 @@ Begin your response now:
 
     # 비동기 작업 시작
     # # Add the background task and return response
-    background_tasks.add_task(process_question, request.sessionId, request.uid, request.question)
+    background_tasks.add_task(process_question, request.sessionId, request.uid, request.question, request.info)
     return {"message": "응답이 성공적으로 처리되었습니다."}
 
 if __name__ == '__main__':
