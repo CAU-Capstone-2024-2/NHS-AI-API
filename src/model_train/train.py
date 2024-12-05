@@ -15,7 +15,7 @@ dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for
 load_in_4bit = False # Use 4bit quantization to reduce memory usage. Can be False.
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/Qwen2.5-1.5B-Instruct",
+    model_name = "unsloth/Qwen2.5-14B-Instruct",
     max_seq_length = max_seq_length,
     dtype = dtype,
     load_in_4bit = load_in_4bit,
@@ -71,7 +71,7 @@ dataset = dataset.map(formatting_prompts_func, batched=True)
 
 
 # Calculate training hyperparaeters
-total_steps = (len(dataset) * 1) // (4 * 8)  # epochs=3, batch_size=4, grad_accum=8
+total_steps = (len(dataset) * 1) // (2 * 4)  # epochs=1, batch_size=2, grad_accum=4
 warmup_steps = total_steps // 10  # 10% of total steps for warmup
 
 trainer = SFTTrainer(
@@ -80,13 +80,13 @@ trainer = SFTTrainer(
     train_dataset = dataset,
     dataset_text_field = "text",
     max_seq_length = max_seq_length,
-    dataset_num_proc = 4,
+    dataset_num_proc = 2,
     packing = False,
     args = TrainingArguments(
-        per_device_train_batch_size = 4,
-        gradient_accumulation_steps = 8,
+        per_device_train_batch_size = 2,
+        gradient_accumulation_steps = 4,
         warmup_steps = warmup_steps,
-        num_train_epochs = 1,  # Set to 5 epochs
+        num_train_epochs = 1,  # Set to 1 epochs
         learning_rate = 1e-4,
         fp16 = not is_bfloat16_supported(),
         bf16 = is_bfloat16_supported(),

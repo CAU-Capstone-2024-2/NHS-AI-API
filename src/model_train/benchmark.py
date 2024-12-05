@@ -21,15 +21,15 @@ def run_inference(client, example):
 
     items = a.split(", ")
     target_keywords = items
-
+    """
     for item in target_keywords:
         if item in text:
             return "True"
     #return "False"
-
+    """
 
     completion = client.with_options(max_retries=1, timeout=2).chat.completions.create(
-        model="mldljyh/nhs_1.5b_1_r16_merged_t2",
+        model="mldljyh/nhs_14b",
         messages=[
             {
                 "role": "system",
