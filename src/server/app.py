@@ -44,7 +44,7 @@ class CustomInformationRequest(BaseModel):
 
 # Define the external API URL as a constant
 EXTERNAL_API_URL = "http://100.119.71.36:1500/api/answer"
-DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '노로바이러스', '심금연' '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토뇨증', '고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '응급' '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열', '심장마비']
+DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '노로바이러스', '심근염' '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토뇨증', '고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '응급' '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열', '심장마비']
 
 @app.post('/qsmaker')
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
@@ -76,7 +76,6 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                 top_p=0.1
             )
             response = acute_completion.choices[0].message.content.strip()
-            print(response)
             return "true" in response.lower()
         
         except Exception as e:
@@ -122,22 +121,10 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
                 return
+
         try:
             # 질문과 관련된 문서 검색
             top_docs = db.search(query=question, k=3)
-
-            # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
-            if not top_docs or top_docs[0]['similarity'] < 0.30:
-                external_api_data = {
-                    "sessionId": session_id,
-                    "uid": uid,
-                    "answer": "안녕하세요! 저는 현재 건강 정보를 중심으로 돕고 있어요. 건강과 관련된 질문을 구체적으로 해주시면 더 자세한 도움을 드릴 수 있어요!",
-                    "status_code": 423
-                }
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
-                        print(await response.text())
-                return
 
             # 관련 문서 내용 추출
             context = ""
@@ -175,7 +162,7 @@ Guidelines for creating topics:
 7. Do not create topics that directly ask if there is a document
 8. Do not create topics related to the following.: [{', '.join(DESIRED_TERMS)}]
 
-If the user's question is not related to health information, do not create any questions. In this case, provide an empty list.
+IMPORTANT: If the user's question is NOT related to health information, DO NOT create any questions. In this case, provide an empty list.
 
 Present your output in the following format:
 [List your three topics in Korean here, one per line. If the query is not health-related, leave this section empty.]
@@ -230,7 +217,7 @@ Please concisely write only the topic, not in question form.
                 external_api_data = {
                     "sessionId": session_id,
                     "uid": uid,
-                    "answer": "안녕하세요! 저는 현재 건강 정보를 중심으로 돕고 있어요. 건강과 관련된 질문을 구체적으로 해주시면 더 자세한 도움을 드릴 수 있어요!",
+                    "answer": "안녕하세요! 저는 건강 정보를 중심으로 돕고 있어요. 구체적인 질문을 해주시면 더 자세히 도와드릴 수 있습니다. 예를 들어:\n\"혈압 관리에 좋은 방법이 뭐예요?\"\m이렇게 질문해 주시면 더 잘 도와드릴게요! 😊",
                     "status_code": 423
                 }
                 async with aiohttp.ClientSession() as session:
@@ -243,6 +230,22 @@ Please concisely write only the topic, not in question form.
                             print("Raw response:", await response.text())
                 return
 
+            # 질문과 관련된 문서 검색
+            top_docs = db.search(query=clarifying_questions[0], k=3)
+
+            # 유사도가 0.2 미만인 경우 답변 불가능으로 처리
+            if not top_docs or top_docs[0]['similarity'] < 0.40:
+                external_api_data = {
+                    "sessionId": session_id,
+                    "uid": uid,
+                    "answer": "안녕하세요! 저는 건강 정보를 중심으로 돕고 있어요. 구체적인 질문을 해주시면 더 자세히 도와드릴 수 있습니다. 예를 들어:\n\"혈압 관리에 좋은 방법이 뭐예요?\"\m이렇게 질문해 주시면 더 잘 도와드릴게요! 😊",
+                    "status_code": 423
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                        print(await response.text())
+                return
+                
             # If clarifying_questions is not empty, check acute in parallel
             if clarifying_questions:
                 acute_results = await asyncio.gather(
@@ -250,7 +253,7 @@ Please concisely write only the topic, not in question form.
                 )
                 print(acute_results)
                 # If two or more questions are acute, proceed as if is_acute is True
-                if sum(acute_results) == 3:
+                if sum(acute_results) >= 2:
                     acute_search_results = db.search_acute(clarifying_questions[0])
                     if acute_search_results:
                         clarifying_questions = [result["metadata"]["question"] for result in acute_search_results]
@@ -392,7 +395,7 @@ Please follow these steps:
 3. Formulate a concise answer that directly addresses the question.
 4. Ensure your answer is simple and easy for an elderly person to understand.
 5. If the document doesn't contain information to fully answer the question, state this clearly and provide whatever relevant information you can from the document in "plain_text" poster template format. In other cases, please use a "qna__square_single" poster template.
-6. IMPORTANT: If the question is CLOSELY RELATED to any of the following topics, just state through "plain_text" that the content cannot be found in the document. "문서에는 해당 질문과 관련된 내용이 보이지 않습니다. 다른 질문을 해주시면 성심껏 답변드리겠습니다." is all you need to say.: [{', '.join(DESIRED_TERMS)}]
+6. IMPORTANT: If the question is CLOSELY RELATED to diseases related to acute conditions or sudden death, just state through "문서에는 해당 질문과 관련된 내용이 보이지 않습니다. 다른 질문을 해주시면 성심껏 답변드리겠습니다." by "plain_text".
 
 When writing your response:
 - Use simple, clear language
