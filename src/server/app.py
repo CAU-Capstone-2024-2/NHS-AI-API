@@ -14,8 +14,12 @@ load_dotenv()
 
 # OpenAI 클라이언트 초기화
 client = OpenAI()
-acute_client = OpenAI(
-    base_url=os.getenv("ACUTE_ADRES"),
+acute_1_5b_client = OpenAI(
+    base_url=os.getenv("ACUTE_ADRES_1_5b"),
+    api_key=os.getenv("ACUTE_API_KEY")
+)
+acute_14b_client = OpenAI(
+    base_url=os.getenv("ACUTE_ADRES_14b"),
     api_key=os.getenv("ACUTE_API_KEY")
 )
 
@@ -50,18 +54,11 @@ DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케�
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
     if not request.question or not request.sessionId or not request.uid:
         raise HTTPException(status_code=400, detail="sessionId, uid, question를 모두 입력해주세요.")
-
-    async def check_acute(question: str) -> bool:
+    async def check_acute_14b(question: str) -> bool:
         try:
             prompt_question = f"다음 건강 정보 관련 질문이 [급성고환염, 당뇨병 합병증(급성 합병증), 당뇨병 합병증(급성 합병증_저혈당), 급성부고환염, 급성 간부전, 급성 바이러스 위장관염, 급성신손상(소아), 급성 세균성 장염, 심낭염(급성 심낭염), 당뇨병 합병증(급성 합병증_당뇨병케토산증, 고혈당고삼투질상태), 급성 심근경색증, 급성 충수염, 급성호흡기바이러스감염증, 급성호흡곤란증후군, 심부전, 부정맥, 심장 판막 질환, 대동맥 박리, 심실중격결손증, 동맥관 개존증, 심방중격결손증, 폐색전증, 감염성 심내막염, 심낭염, 고혈압성 심장질환, 협심증, 폐렴, 만성폐쇄성폐질환, 기흉, 부신부전증, 갑상선 기능 항진증, 갑상선 기능 저하증, 갈색세포종, 뇌졸중, 뇌전증, 뇌수막염, 뇌하수체 기능 저하증, 패혈증, 중증열성혈소판감소증후군, 말라리아, 레지오넬라증, 일본뇌염, 광견병, 파상풍, 디프테리아, 백일해, 비브리오 패혈증, 아나필락시스, 독극물 섭취, 영아돌연사증후군, 췌장염, 장결핵, 샤가스병, 바이러스성 출혈열] 카테고리 안에 속한다며 True 속하지 않는다면 False을 출력하세요. 다른 내용 없이 True 또는 False만을 출력하세요.: {question}"
-
-            for term in DESIRED_TERMS:
-                if term in question:
-                    return True
-
-
-            acute_completion = acute_client.with_options(timeout=2).chat.completions.create(
-                model="mldljyh/nhs_1.5b_1_r16_merged_t2",
+            acute_completion = acute_14b_client.with_options(timeout=6).chat.completions.create(
+                model="mldljyh/nhs_14b-FP8-Dynamic",
                 messages=[
                     {
                         "role": "system",
@@ -99,12 +96,72 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                 response = completion.choices[0].message.content.strip()
                 return "true" in response.lower()
             except Exception as e:
-                print(f"GPT-4o-mini error: {str(e)}")
+                print(f"GPT-4o error: {str(e)}")
                 return False
+
+
+
+    async def check_acute_1_5b(question: str) -> bool:
+        try:
+            prompt_question = f"다음 건강 정보 관련 질문이 [급성고환염, 당뇨병 합병증(급성 합병증), 당뇨병 합병증(급성 합병증_저혈당), 급성부고환염, 급성 간부전, 급성 바이러스 위장관염, 급성신손상(소아), 급성 세균성 장염, 심낭염(급성 심낭염), 당뇨병 합병증(급성 합병증_당뇨병케토산증, 고혈당고삼투질상태), 급성 심근경색증, 급성 충수염, 급성호흡기바이러스감염증, 급성호흡곤란증후군, 심부전, 부정맥, 심장 판막 질환, 대동맥 박리, 심실중격결손증, 동맥관 개존증, 심방중격결손증, 폐색전증, 감염성 심내막염, 심낭염, 고혈압성 심장질환, 협심증, 폐렴, 만성폐쇄성폐질환, 기흉, 부신부전증, 갑상선 기능 항진증, 갑상선 기능 저하증, 갈색세포종, 뇌졸중, 뇌전증, 뇌수막염, 뇌하수체 기능 저하증, 패혈증, 중증열성혈소판감소증후군, 말라리아, 레지오넬라증, 일본뇌염, 광견병, 파상풍, 디프테리아, 백일해, 비브리오 패혈증, 아나필락시스, 독극물 섭취, 영아돌연사증후군, 췌장염, 장결핵, 샤가스병, 바이러스성 출혈열] 카테고리 안에 속한다며 True 속하지 않는다면 False을 출력하세요. 다른 내용 없이 True 또는 False만을 출력하세요.: {question}"
+
+            for term in DESIRED_TERMS:
+                if term in question:
+                    return True
+
+
+            acute_completion = acute_1_5b_client.with_options(timeout=4).chat.completions.create(
+                model="mldljyh/nhs_1.5b",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": ""
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt_question
+                    }
+                ],
+                temperature=0,
+                top_p=0.1
+            )
+            response = acute_completion.choices[0].message.content.strip()
+            
+            if "true" in response.lower():
+                except_terms = ["감기", "기침", "유지", "당뇨", "혈증", "고혈", "혈압","운동", "습관"]
+                for term in except_terms:
+                    if term in question:
+                        return False
+            return "true" in response.lower()
+        
+        except Exception as e:
+            print(f"Acute API error: {str(e)}, falling back to gpt-4o")
+            try:
+                completion = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": ""
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt_question
+                        }
+                    ],
+                    temperature=0,
+                    top_p=0.1
+                )
+                response = completion.choices[0].message.content.strip()
+                return "true" in response.lower()
+            except Exception as e:
+                print(f"GPT-4o error: {str(e)}")
+                return False
+        
 
     async def process_clarifying_questions(session_id: str, uid: str, question: str):
         # Check if it's an acute question
-        is_acute = await check_acute(question)
+        is_acute = await check_acute_14b(question)
         print(is_acute)
         if is_acute:
             acute_results = db.search_acute(question)
@@ -249,7 +306,7 @@ Please concisely write only the topic, not in question form.
             # If clarifying_questions is not empty, check acute in parallel
             if clarifying_questions:
                 acute_results = await asyncio.gather(
-                    *[check_acute(q) for q in clarifying_questions[:3]]
+                    *[check_acute_1_5b(q) for q in clarifying_questions[:3]]
                 )
                 print(acute_results)
                 # If two or more questions are acute, proceed as if is_acute is True
