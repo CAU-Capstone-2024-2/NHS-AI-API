@@ -339,11 +339,25 @@ class ContextualVectorDB:
         disease_map = {
             "고혈압": "hypertension",
             "이상지질혈증": "dyslipidemia",
-            "당뇨병": "diabetes"
+            "당뇨병": "diabetes",
+            "퇴행성 관절염": "degenerative arthritis",
+            "골다공증": "osteoporosis",
+            "중장년층 운동": "middle age exercise",
         }
         
         # Convert to English names
         target_diseases = [disease_map.get(d) for d in diseases if disease_map.get(d)]
+        
+        # Add seasonal information if relevant diseases are present
+        if any(disease in target_diseases for disease in ["hypertension", "dyslipidemia", "diabetes"]):
+            from datetime import datetime
+            current_month = datetime.now().month
+            # Summer: June (6) through August (8)
+            # Winter: December (12) through February (2)
+            if 6 <= current_month <= 8:
+                target_diseases.append("summer")
+            elif current_month == 12 or 1 <= current_month <= 2:
+                target_diseases.append("winter")
         
         if not target_diseases:
             return {}
@@ -378,7 +392,7 @@ class ContextualVectorDB:
         
         # Sample based on probabilities
         selected_idx = np.random.choice(relevant_indices, p=similarities)
-        
+        print(f"Selected index: {selected_idx}")
         # Return both img_big URL and index
         return {
             "img_url": self.custom_info_metadata[selected_idx]["img_big"],
