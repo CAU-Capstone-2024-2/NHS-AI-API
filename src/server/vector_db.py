@@ -327,27 +327,27 @@ class ContextualVectorDB:
         
         if penalize_indices is None:
             penalize_indices = []
-            
+
         # Extract disease names
         disease_match = re.search(r'<disease>(.*?)</disease>', info)
         if not disease_match:
             return {}
-            
+        
         diseases = [d.strip() for d in disease_match.group(1).split(',')]
         
         # Map Korean disease names to English
         disease_map = {
             "고혈압": "hypertension",
-            "이상지질혈증": "dyslipidemia",
+            "고지혈증": "dyslipidemia",
             "당뇨병": "diabetes",
             "퇴행성 관절염": "degenerative arthritis",
             "골다공증": "osteoporosis",
             "중장년층 운동": "middle age exercise",
         }
-        
+
         # Convert to English names
         target_diseases = [disease_map.get(d) for d in diseases if disease_map.get(d)]
-        
+
         # Add seasonal information if relevant diseases are present
         if any(disease in target_diseases for disease in ["hypertension", "dyslipidemia", "diabetes"]):
             from datetime import datetime
@@ -361,19 +361,15 @@ class ContextualVectorDB:
         
         if not target_diseases:
             return {}
-            
+
         # Get relevant metadata indices
         relevant_indices = [
             i for i, meta in enumerate(self.custom_info_metadata)
             if meta["disease"] in target_diseases
         ]
-        
         if not relevant_indices:
             return {}
             
-        # Calculate initial probabilities (equal weights)
-        probabilities = np.ones(len(relevant_indices)) / len(relevant_indices)
-        
         # Get info embedding
         info_embedding = self.voyage_client.embed([info], model="voyage-3").embeddings[0]
         
@@ -381,15 +377,15 @@ class ContextualVectorDB:
         similarities = []
         for idx in relevant_indices:
             similarity = np.dot(self.custom_info_embeddings[idx], info_embedding)
+            similarity += 1.0
+
             # Apply penalty if index is in penalize_indices
             if str(self.custom_info_metadata[idx]["index"]) in penalize_indices:
-                similarity *= 0.1  # Strong penalty factor
+                similarity *= 0.010  # Strong penalty factor
             similarities.append(similarity)
-        
         # Normalize similarities to probabilities
         similarities = np.array(similarities)
         similarities = np.exp(similarities) / np.sum(np.exp(similarities))
-        
         # Sample based on probabilities
         selected_idx = np.random.choice(relevant_indices, p=similarities)
         print(f"Selected index: {selected_idx}")
