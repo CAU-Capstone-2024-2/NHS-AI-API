@@ -35,6 +35,20 @@ db.load_acute_data()
 # FastAPI 애플리케이션 초기화
 app = FastAPI()
 
+# Create a shared aiohttp session
+http_session = None
+
+@app.on_event("startup")
+async def startup_event():
+    global http_session
+    http_session = aiohttp.ClientSession()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global http_session
+    if http_session:
+        await http_session.close()
+
 class QuestionRequest(BaseModel):
     sessionId: str
     uid: str
@@ -48,7 +62,7 @@ class CustomInformationRequest(BaseModel):
 
 # Define the external API URL as a constant
 EXTERNAL_API_URL = "http://100.119.71.36:1500/api/answer"
-DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '노로바이러스', '심근염' '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토뇨증', '고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '응급' '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열', '심장마비']
+DESIRED_TERMS = ['급성', '급성고환염', '급성 합병증', '당뇨병케토산증', '저혈당', '당뇨병 합병증(급성 합병증)', '당뇨병 합병증(급성 합병증_저혈당)', '저혈당' '급성부고환염', '급성 간부전', '급성 바이러스 위장관염', '급성신손상(소아)', '급성 세균성 장염', '심낭염(급성 심낭염)', '당뇨병 합병증(급성 합병증_당뇨병케토산증, 고혈당고삼투질상태)', '급성 심근경색증', '급성 충수염', '급성호흡기바이러스감염증', '급성호흡곤란증후군', '심부전', '부정맥', '심장 판막 질환', '대동맥 박리', '심실중격결손증', '동맥관 개존증', '심방중격결손증', '폐색전증', '감염성 심내막염', '심낭염', '고혈압성 심장질환', '협심증', '폐렴', '만성폐쇄성폐질환', '기흉', '부신부전증', '갑상선 기능 항진증', '갑상선 기능 저하증', '갈색세포종', '뇌졸중', '뇌전증', '뇌수막염', '뇌하수체 기능 저하증', '패혈증', '중증열성혈소판감소증후군', '말라리아', '레지오넬라증', '일본뇌염', '응급' '광견병', '파상풍', '디프테리아', '백일해', '비브리오 패혈증', '아나필락시스', '독극물 섭취', '영아돌연사증후군', '췌장염', '장결핵', '샤가스병', '바이러스성 출혈열', '심장마비']
 
 @app.post('/qsmaker')
 async def make_questions(request: QuestionRequest, background_tasks: BackgroundTasks):
@@ -57,7 +71,8 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
     async def check_acute_14b(question: str) -> bool:
         try:
             prompt_question = f"다음 건강 정보 관련 질문이 [급성고환염, 당뇨병 합병증(급성 합병증), 당뇨병 합병증(급성 합병증_저혈당), 급성부고환염, 급성 간부전, 급성 바이러스 위장관염, 급성신손상(소아), 급성 세균성 장염, 심낭염(급성 심낭염), 당뇨병 합병증(급성 합병증_당뇨병케토산증, 고혈당고삼투질상태), 급성 심근경색증, 급성 충수염, 급성호흡기바이러스감염증, 급성호흡곤란증후군, 심부전, 부정맥, 심장 판막 질환, 대동맥 박리, 심실중격결손증, 동맥관 개존증, 심방중격결손증, 폐색전증, 감염성 심내막염, 심낭염, 고혈압성 심장질환, 협심증, 폐렴, 만성폐쇄성폐질환, 기흉, 부신부전증, 갑상선 기능 항진증, 갑상선 기능 저하증, 갈색세포종, 뇌졸중, 뇌전증, 뇌수막염, 뇌하수체 기능 저하증, 패혈증, 중증열성혈소판감소증후군, 말라리아, 레지오넬라증, 일본뇌염, 광견병, 파상풍, 디프테리아, 백일해, 비브리오 패혈증, 아나필락시스, 독극물 섭취, 영아돌연사증후군, 췌장염, 장결핵, 샤가스병, 바이러스성 출혈열] 카테고리 안에 속한다며 True 속하지 않는다면 False을 출력하세요. 다른 내용 없이 True 또는 False만을 출력하세요.: {question}"
-            acute_completion = acute_14b_client.with_options(timeout=6).chat.completions.create(
+            acute_completion = await asyncio.to_thread(
+                acute_14b_client.with_options(timeout=6).chat.completions.create,
                 model="mldljyh/nhs_14b-FP8-Dynamic",
                 messages=[
                     {
@@ -76,9 +91,10 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
             return "true" in response.lower()
         
         except Exception as e:
-            print(f"Acute API error: {str(e)}, falling back to gpt-4o-mini")
+            print(f"Acute API error: {str(e)}, falling back to gpt-4o")
             try:
-                completion = client.chat.completions.create(
+                completion = await asyncio.to_thread(
+                    client.chat.completions.create,
                     model="gpt-4o",
                     messages=[
                         {
@@ -110,7 +126,8 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     return True
 
 
-            acute_completion = acute_1_5b_client.with_options(timeout=4).chat.completions.create(
+            acute_completion = await asyncio.to_thread(
+                acute_1_5b_client.with_options(timeout=4).chat.completions.create,
                 model="mldljyh/nhs_1.5b",
                 messages=[
                     {
@@ -137,7 +154,8 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
         except Exception as e:
             print(f"Acute API error: {str(e)}, falling back to gpt-4o")
             try:
-                completion = client.chat.completions.create(
+                completion = await asyncio.to_thread(
+                    client.chat.completions.create,
                     model="gpt-4o",
                     messages=[
                         {
@@ -174,8 +192,8 @@ async def make_questions(request: QuestionRequest, background_tasks: BackgroundT
                     "status_code": 212
                 }
                 print(clarifying_questions)
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
                 return
 
@@ -230,7 +248,8 @@ Please concisely write only the topic, not in question form.
 """
                 }
             ]
-            gpt_response = client.chat.completions.create(
+            gpt_response = await asyncio.to_thread(
+                client.chat.completions.create,
                 model="gpt-4o",
                 messages=messages,
                 temperature=0.2,
@@ -277,8 +296,8 @@ Please concisely write only the topic, not in question form.
                     "answer": "안녕하세요! 저는 건강 정보를 중심으로 돕고 있어요. 구체적인 질문을 해주시면 더 자세히 도와드릴 수 있습니다. 예를 들어:\n\"혈압 관리에 좋은 방법이 뭐예요?\"\m이렇게 질문해 주시면 더 잘 도와드릴게요! 😊",
                     "status_code": 423
                 }
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         try:
                             result = await response.json()
                             print("Response:", result)
@@ -298,8 +317,8 @@ Please concisely write only the topic, not in question form.
                     "answer": "안녕하세요! 저는 건강 정보를 중심으로 돕고 있어요. 구체적인 질문을 해주시면 더 자세히 도와드릴 수 있습니다. 예를 들어:\n\"혈압 관리에 좋은 방법이 뭐예요?\"\m이렇게 질문해 주시면 더 잘 도와드릴게요! 😊",
                     "status_code": 423
                 }
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
                 return
                 
@@ -321,8 +340,8 @@ Please concisely write only the topic, not in question form.
                             "status_code": 212
                         }
                         print(external_api_data)
-                        async with aiohttp.ClientSession() as session:
-                            async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                        async with aiohttp.ClientSession() as http_session:
+                            async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                                 print(await response.text())
                         return
 
@@ -334,8 +353,8 @@ Please concisely write only the topic, not in question form.
                 "status_code": 211
             }
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -350,8 +369,8 @@ Please concisely write only the topic, not in question form.
                 "status_code": 500
             }
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -383,8 +402,8 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
                     "status_code": 203
                 }
                 print(external_api_data)
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
         except Exception as e:
             error_message = f"급성 질문 처리 중 오류 발생: {str(e)}"
@@ -396,8 +415,8 @@ async def ask_question(request: QuestionRequest, background_tasks: BackgroundTas
                 "status_code": 500
             }
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -470,7 +489,8 @@ Begin your response now:
             ]
 
             # GPT-4o를 사용하여 답변 생성
-            gpt_response = client.chat.completions.create(
+            gpt_response = await asyncio.to_thread(
+                client.chat.completions.create,
                 model="gpt-4o-mini",
                 messages=messages,
                 temperature=0,
@@ -555,8 +575,8 @@ Begin your response now:
                 }
 
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
@@ -569,11 +589,11 @@ Begin your response now:
                 "sessionId": session_id,
                 "uid": uid,
                 "answer": error_message,
-                "status_code": 500  # Internal server error
+                "status_code": 500
             }
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(EXTERNAL_API_URL, json=external_api_data) as response:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(EXTERNAL_API_URL, json=external_api_data) as response:
                         print(await response.text())
             except Exception as e:
                 print(f"외부 API 호출 중 오류 발생: {str(e)}")
